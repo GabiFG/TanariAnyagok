@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Informatika-válogató</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Trebuchet MS","Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:linear-gradient(160deg,#e0f2fe,#fef9c3 55%,#fce7f3);min-height:100vh;color:#1e293b;-webkit-tap-highlight-color:transparent}
+.bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px clamp(10px,2vw,28px);background:linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.bar h1{margin:0;font-size:clamp(18px,2.6vw,32px)}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.st{background:rgba(255,255,255,.22);border-radius:999px;padding:6px 14px;font-size:clamp(15px,1.9vw,24px);font-weight:700;white-space:nowrap}
+.st b{font-size:1.1em}
+button{font:inherit;font-weight:700;font-size:clamp(15px,1.8vw,22px);border:0;border-radius:999px;padding:8px 16px;background:#fff;color:#6d28d9;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+button:active{transform:translateY(2px)}
+main{max-width:1500px;margin:0 auto;padding:clamp(10px,2vw,26px)}
+.hint{margin:0 0 10px;text-align:center;font-size:clamp(17px,2.3vw,30px);font-weight:700;color:#4338ca}
+#tray{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(8px,1.2vw,14px);padding:clamp(10px,1.6vw,20px);background:rgba(255,255,255,.75);border:4px dashed #a5b4fc;border-radius:26px;margin-bottom:clamp(12px,2vw,26px)}
+#tray:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:3px solid #c7d2fe;border-radius:18px;font-size:clamp(16px,1.9vw,26px);font-weight:700;box-shadow:0 4px 0 #c7d2fe,0 6px 12px rgba(0,0,0,.12);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.chip span{font-size:1.3em}
+.chip.lifted{opacity:.25}
+.ghost{position:fixed;z-index:1000;pointer-events:none;transform:scale(1.12) rotate(-3deg);box-shadow:0 14px 26px rgba(0,0,0,.35);cursor:grabbing}
+.ghost.wrong{background:#fecaca;border-color:#ef4444}
+.boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(12px,2vw,26px)}
+.box{position:relative;border-radius:30px;padding:clamp(12px,1.8vw,22px);color:#fff;box-shadow:0 8px 0 rgba(0,0,0,.18),0 12px 24px rgba(0,0,0,.2);min-height:240px;transition:transform .15s}
+.box[data-cat=hw]{background:linear-gradient(160deg,#38bdf8,#2563eb)}
+.box[data-cat=sw]{background:linear-gradient(160deg,#c084fc,#7c3aed)}
+.box[data-cat=os]{background:linear-gradient(160deg,#fdba74,#ea580c)}
+.box.over{transform:scale(1.03);outline:6px solid #fde047}
+.bt{text-align:center;margin-bottom:10px}
+.bi{font-size:clamp(38px,5vw,72px);display:block;line-height:1.1}
+.bt h2{margin:2px 0;font-size:clamp(22px,3vw,40px);text-shadow:0 2px 0 rgba(0,0,0,.25)}
+.bt small{font-size:clamp(14px,1.5vw,20px);opacity:.95}
+.zone{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;justify-content:center;min-height:110px;background:rgba(255,255,255,.22);border-radius:20px;padding:10px}
+.chip.placed{cursor:default;touch-action:auto;background:#f0fdf4;border-color:#86efac;box-shadow:0 3px 0 #86efac;color:#166534;animation:pop .4s}
+.chip.placed::after{content:"✓";color:#16a34a}
+@keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+.box::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0}
+.box.ok::after{background:#22c55e;animation:fl .6s}
+.box.bad::after{background:#ef4444;animation:fl .6s}
+@keyframes fl{0%{opacity:.85}100%{opacity:0}}
+#win{position:fixed;inset:0;z-index:2000;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;padding:16px}
+#win.show{display:flex}
+#confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+#confetti i{position:absolute;top:-30px;border-radius:3px;animation:fall linear infinite}
+@keyframes fall{to{transform:translateY(115vh) rotate(720deg)}}
+.card{position:relative;background:#fff;border-radius:34px;padding:clamp(18px,4vw,44px);text-align:center;max-width:720px;box-shadow:0 20px 50px rgba(0,0,0,.45);animation:pop .6s}
+.card .tr{font-size:clamp(60px,12vw,120px);display:block;animation:bn 1s infinite alternate}
+@keyframes bn{to{transform:translateY(-16px) rotate(6deg)}}
+.card h2{margin:6px 0 10px;font-size:clamp(24px,4.2vw,44px);color:#7c3aed}
+.card p{font-size:clamp(18px,2.4vw,28px);margin:6px 0 16px;font-weight:700}
+@media(max-width:760px){.boxes{grid-template-columns:1fr}.box{min-height:200px}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>💻 Informatika-válogató</h1>
+  <div class="stats">
+    <span class="st">⭐ Pontszám: <b id="score">0</b> / 21</span>
+    <span class="st">🎯 Próbálkozások: <b id="tries">0</b></span>
+    <span class="st">⏱️ Idő: <b id="time">00:00</b></span>
+  </div>
+  <div><button id="snd" title="Hang be/ki">🔊</button> <button id="reset">🔄 Újra</button></div>
+</header>
+<main>
+  <p class="hint">👆 Húzd az elemeket a megfelelő dobozba!</p>
+  <section id="tray"></section>
+  <section class="boxes">
+    <div class="box" data-cat="hw"><div class="bt"><span class="bi">🖥️</span><h2>Hardver</h2><small>Amit meg lehet fogni</small></div><div class="zone"></div></div>
+    <div class="box" data-cat="sw"><div class="bt"><span class="bi">🧩</span><h2>Szoftver</h2><small>Programok, játékok, alkalmazások</small></div><div class="zone"></div></div>
+    <div class="box" data-cat="os"><div class="bt"><span class="bi">⚙️</span><h2>Operációs rendszer</h2><small>Ez irányítja az egész gépet</small></div><div class="zone"></div></div>
+  </section>
+</main>
+<div id="win">
+  <div id="confetti"></div>
+  <div class="card">
+    <span class="tr">🏆</span>
+    <h2>🎉 Gratulálok! Minden elemet helyesen soroltál be! 🎉</h2>
+    <p>⭐ 21 / 21 pont &nbsp; 🎯 Próbálkozások: <span id="fTries"></span> &nbsp; ⏱️ Idő: <span id="fTime"></span></p>
+    <button id="again">🔄 Új játék</button>
+  </div>
+</div>
+<script>
+const ITEMS=[["monitor","🖥️","hw"],["Windows","🪟","os"],["egér","🖱️","hw"],["Paint","🎨","sw"],["billentyűzet","⌨️","hw"],["Linux","🐧","os"],["fejhallgató","🎧","hw"],["Word","📝","sw"],["nyomtató","🖨️","hw"],["Roblox","🎮","sw"],["webcam","📷","hw"],["projektor","📽️","hw"],["Excel","📊","sw"],["hangszóró","🔊","hw"],["pendrive","💾","hw"],["Google Chrome","🌐","sw"],["Spotify","🎵","sw"],["YouTube","▶️","sw"],["fülhallgató","👂","hw"],["headset","🎙️","hw"],["CD/DVD","📀","hw"]];
+const $=s=>document.querySelector(s);
+let score=0,tries=0,t0=0,tEnd=0,timer=null,drag=null,muted=false,ac=null;
+
+function fmt(){const s=t0?Math.floor(((tEnd||Date.now())-t0)/1000):0;return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");}
+function upd(){$("#score").textContent=score;$("#tries").textContent=tries;$("#time").textContent=fmt();}
+
+/* Hang */
+function initAudio(){
+  if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+  if(ac&&ac.state==="suspended")ac.resume();
+}
+function tone(f,t,d,type,v){
+  if(!ac||muted)return;
+  const o=ac.createOscillator(),g=ac.createGain(),s=ac.currentTime+t;
+  o.type=type||"sine";o.frequency.value=f;
+  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(v||.2,s+.02);g.gain.exponentialRampToValueAtTime(.001,s+d);
+  o.connect(g);g.connect(ac.destination);o.start(s);o.stop(s+d+.05);
+}
+const sOk=()=>{tone(660,0,.15);tone(880,.1,.28);};
+const sBad=()=>{tone(180,0,.18,"square",.12);tone(130,.15,.25,"square",.12);};
+const sWin=()=>[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,i*.16,.35));
+
+/* Játék felépítése */
+function newGame(){
+  clearInterval(timer);timer=null;t0=0;tEnd=0;score=0;tries=0;drag=null;
+  document.querySelectorAll(".zone").forEach(z=>z.innerHTML="");
+  document.querySelectorAll(".ghost").forEach(g=>g.remove());
+  const tray=$("#tray");tray.innerHTML="";
+  const a=ITEMS.slice();
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  a.forEach(([n,ic,c])=>{
+    const d=document.createElement("div");
+    d.className="chip";d.dataset.cat=c;
+    d.innerHTML="<span>"+ic+"</span> "+n;
+    d.addEventListener("pointerdown",e=>start(e,d));
+    tray.appendChild(d);
+  });
+  $("#win").classList.remove("show");$("#confetti").innerHTML="";
+  upd();
+}
+
+/* Húzás (egér + érintés: Pointer Events) */
+function start(e,chip){
+  if(drag||chip.classList.contains("placed")||chip.classList.contains("lifted"))return;
+  if(e.pointerType==="mouse"&&e.button!==0)return;
+  e.preventDefault();
+  initAudio();
+  if(!t0){t0=Date.now();timer=setInterval(upd,500);}
+  const r=chip.getBoundingClientRect(),g=chip.cloneNode(true);
+  g.classList.add("ghost");
+  g.style.width=r.width+"px";g.style.left=r.left+"px";g.style.top=r.top+"px";
+  document.body.appendChild(g);
+  chip.classList.add("lifted");
+  drag={chip,g,dx:e.clientX-r.left,dy:e.clientY-r.top,x:e.clientX,y:e.clientY,over:null};
+  scrollLoop();
+}
+function boxAt(x,y){const el=document.elementFromPoint(x,y);return el?el.closest(".box"):null;}
+window.addEventListener("pointermove",e=>{
+  if(!drag)return;
+  drag.x=e.clientX;drag.y=e.clientY;
+  drag.g.style.left=(e.clientX-drag.dx)+"px";
+  drag.g.style.top=(e.clientY-drag.dy)+"px";
+  const b=boxAt(e.clientX,e.clientY);
+  if(b!==drag.over){if(drag.over)drag.over.classList.remove("over");if(b)b.classList.add("over");drag.over=b;}
+});
+function scrollLoop(){
+  if(!drag)return;
+  if(drag.y<70)window.scrollBy(0,-14);
+  else if(drag.y>innerHeight-70)window.scrollBy(0,14);
+  requestAnimationFrame(scrollLoop);
+}
+function flash(box,cls){box.classList.remove("ok","bad");void box.offsetWidth;box.classList.add(cls);}
+function back(d){
+  const r=d.chip.getBoundingClientRect();
+  d.g.style.transition="left .35s ease,top .35s ease";
+  d.g.style.left=r.left+"px";d.g.style.top=r.top+"px";
+  setTimeout(()=>{d.g.remove();d.chip.classList.remove("lifted");},370);
+}
+function end(e){
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(d.over)d.over.classList.remove("over");
+  const box=e&&e.type==="pointerup"?boxAt(e.clientX,e.clientY):null;
+  if(!box){back(d);return;}
+  tries++;
+  if(box.dataset.cat===d.chip.dataset.cat){
+    d.g.remove();
+    d.chip.classList.remove("lifted");d.chip.classList.add("placed");
+    box.querySelector(".zone").appendChild(d.chip);
+    score++;flash(box,"ok");sOk();upd();
+    if(score===ITEMS.length)finish();
+  }else{
+    d.g.classList.add("wrong");
+    flash(box,"bad");sBad();upd();back(d);
+  }
+}
+window.addEventListener("pointerup",end);
+window.addEventListener("pointercancel",end);
+
+/* Győzelem */
+function finish(){
+  tEnd=Date.now();clearInterval(timer);upd();
+  $("#fTries").textContent=tries;$("#fTime").textContent=fmt();
+  const c=$("#confetti"),cols=["#ef4444","#f59e0b","#22c55e","#3b82f6","#a855f7","#ec4899"];
+  for(let i=0;i<90;i++){
+    const p=document.createElement("i");
+    p.style.cssText="left:"+Math.random()*100+"%;background:"+cols[i%6]+";width:"+(8+Math.random()*8)+"px;height:"+(12+Math.random()*10)+"px;animation-duration:"+(2.5+Math.random()*3)+"s;animation-delay:"+Math.random()*1.5+"s";
+    c.appendChild(p);
+  }
+  setTimeout(()=>$("#win").classList.add("show"),450);
+  setTimeout(sWin,450);
+}
+
+$("#reset").addEventListener("click",newGame);
+$("#again").addEventListener("click",newGame);
+$("#snd").addEventListener("click",()=>{muted=!muted;$("#snd").textContent=muted?"🔇":"🔊";initAudio();});
+document.addEventListener("contextmenu",e=>{if(e.target.closest(".chip"))e.preventDefault();});
+newGame();
+</script>
+</body>
+</html>
