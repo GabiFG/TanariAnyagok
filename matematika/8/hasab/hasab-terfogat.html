@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A hasáb térfogata</title>
+<style>
+:root{--ink:#1f2933;--mute:#5f6b76;--line:#d8dee4;--blue:#1971c2;--orange:#e8590c;color-scheme:light}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+#app{display:flex;flex-direction:column;height:100%}
+#bar,#params{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:space-between;padding:6px 16px}
+.title{font-weight:700;font-size:18px}.hint{color:var(--mute);font-size:12px;font-weight:400;margin-left:8px}
+.grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+button{font:600 13px system-ui,sans-serif;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:6px 11px;cursor:pointer}
+button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#params{background:#f6f8fa;border-top:1px solid var(--line);border-bottom:1px solid var(--line);justify-content:flex-start;font-size:14px}
+label{display:flex;align-items:center;gap:5px;font-weight:600}
+input{width:58px;font:600 15px system-ui,sans-serif;padding:4px 6px;border:1.5px solid var(--line);border-radius:6px}
+#err{color:#c92a2a;font-size:13px}
+#prog{height:4px;background:#eef1f4;margin:0 16px}#prog i{display:block;height:100%;width:0;background:var(--blue)}
+#stage{flex:1;min-height:230px;position:relative;overflow:hidden}
+canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#pp{position:absolute;left:12px;bottom:12px;font-size:18px;padding:11px 20px;background:var(--ink);color:#fff;border-color:var(--ink);box-shadow:0 2px 8px #0003}
+.tag{position:absolute;left:0;top:0;padding:2px 9px;border-radius:999px;background:#fff;border:1.5px solid var(--c,#9aa5b1);font:600 13px system-ui,sans-serif;color:var(--tc,var(--c,#1f2933));pointer-events:none;white-space:nowrap;opacity:0}
+#panel{position:relative;height:168px;border-top:1px solid var(--line)}
+.sb{position:absolute;inset:10px 16px;opacity:0;transition:opacity .4s;pointer-events:none}.sb.on{opacity:1}
+.h{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+.line{font-size:16px;margin:3px 0}.big{font-size:clamp(16px,2.5vw,24px);font-weight:700}.note{font-size:13px;color:var(--mute)}
+.b{color:var(--blue)}.o{color:var(--orange)}
+[data-a]{opacity:0}
+</style>
+</head>
+<body>
+<div id="app">
+ <div id="bar"><div class="title">A hasáb térfogata<span class="hint">húzással forgatható · szóköz vagy → = tovább / szünet</span></div>
+  <div class="grp" id="shapes"><button data-sh="teglalap">Téglalap</button><button data-sh="negyzet">Négyzet</button><button data-sh="rombusz">Rombusz</button><button data-sh="romboid">Romboid</button><button data-sh="trapez">Trapéz</button><button data-sh="haromszog">Általános háromszög</button><button data-sh="derekszogu">Derékszögű háromszög</button></div>
+  <div class="grp"><button id="mode" class="on">Kézi léptetés</button><button id="rst">Újrakezdés</button><button data-s="0">1. lépés</button><button data-s="1">2. lépés</button><button data-s="2">3. lépés</button><button data-s="3">4. lépés</button></div></div>
+ <div id="params"><span id="pin" class="grp"></span><label>Magasság (rétegek): <input id="hh" type="number" min="2" max="8" value="4"></label><span id="err"></span></div>
+ <div id="prog"><i></i></div>
+ <div id="stage"><canvas id="c"></canvas><div id="tags"></div><button id="pp">⏸ Szünet</button></div>
+ <div id="panel"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const ease=x=>{x=Math.min(1,Math.max(0,x));return x*x*(3-2*x)};
+const cv=$('#c'),ctx=cv.getContext('2d'),stage=$('#stage'),tagsEl=$('#tags');
+
+// ---- alaplapok: minden réteg 1 területű cellákra van osztva ----
+const DEF={teglalap:[['a',4,1,10],['b',3,1,10]],negyzet:[['a',3,1,8]],rombusz:[['a',4,2,10],['m',3,1,9]],romboid:[['a',4,1,10],['m',3,1,8]],trapez:[['a',8,3,12],['c',4,1,10],['m',2,1,8]],haromszog:[['a',6,1,12],['m',4,1,10]],derekszogu:[['a',6,1,10],['b',4,1,10]]};
+const PV={};for(const k in DEF)PV[k]=DEF[k].map(d=>d[1]);
+let key='teglalap',H=4;
+const nearDiv=(A,t)=>{let b=1;for(let d=1;d<=A;d++)if(A%d==0&&Math.abs(d-t)<Math.abs(b-t))b=d;return b;};
+const grid=(nx,nz,m)=>{const r=[];for(let j=0;j<nz;j++)for(let i=0;i<nx;i++)r.push([m(i,j),m(i+1,j),m(i+1,j+1),m(i,j+1)]);return r;};
+const MK={
+ teglalap([a,b]){return{cube:1,A:a*b,f:`a · b = ${a} · ${b}`,cells:grid(a,b,(u,v)=>[u-a/2,v-b/2]),dims:[[`a = ${a}`,[0,0,b/2+.65]],[`b = ${b}`,[a/2+.8,0,0]]],aux:[]};},
+ negyzet([a]){return{cube:1,A:a*a,f:`a · a = ${a} · ${a}`,cells:grid(a,a,(u,v)=>[u-a/2,v-a/2]),dims:[[`a = ${a}`,[0,0,a/2+.65]],[`a = ${a}`,[a/2+.8,0,0]]],aux:[]};},
+ rombusz([a,m]){if(m>=a)return'Rombusz: az m magasság legyen kisebb, mint az a oldal.';
+  const s=Math.sqrt(a*a-m*m),k=s/m,x0=s/2-a/2;
+  return{A:a*m,f:`a · m = ${a} · ${m}`,cells:grid(a,m,(u,v)=>[u+k*v-a/2-s/2,v-m/2]),dims:[[`a = ${a}`,[s/2,0,m/2+.65]],[`a = ${a}`,[a/2+.8,0,0]],[`m = ${m}`,[x0,0,0]]],aux:[[x0,m/2,x0,-m/2]]};},
+ romboid([a,m]){const s=Math.min(m/2,a/2),k=s/m,x0=s/2-a/2;
+  return{A:a*m,f:`a · m = ${a} · ${m}`,cells:grid(a,m,(u,v)=>[u+k*v-a/2-s/2,v-m/2]),dims:[[`a = ${a}`,[s/2,0,m/2+.65]],[`m = ${m}`,[x0,0,0]]],aux:[[x0,m/2,x0,-m/2]]};},
+ haromszog([a,m]){const r=tri(a,m,.3*a);if(typeof r==='string')return r;
+  return{...r,f:`a · m / 2 = ${a} · ${m} / 2`,dims:[[`a = ${a}`,[0,0,m/2+.65]],[`m = ${m}`,[r.px,0,0]]],aux:[[r.px,m/2,r.px,-m/2]]};},
+ derekszogu([a,b]){const r=tri(a,b,0);if(typeof r==='string')return r;
+  return{...r,f:`a · b / 2 = ${a} · ${b} / 2`,dims:[[`a = ${a}`,[0,0,b/2+.65]],[`b = ${b}`,[-a/2-.8,0,0]]],aux:[]};},
+ trapez([a,c,m]){if(a<=c)return'Trapéz: az a (hosszabb alap) legyen nagyobb, mint c.';
+  const A=(a+c)*m/2;if(A%1)return'Trapéz: az (a+c)/2·m alapterület nem egész – változtass egy adatot.';
+  const r=nearDiv(A,m),q=A/r,d=(a-c)/m,Y=[0];for(let k=1;k<r;k++)Y.push((a-Math.sqrt(a*a-2*d*k*A/r))/d);Y.push(m);
+  const cells=[];for(let k=0;k<r;k++){const w0=a-d*Y[k],w1=a-d*Y[k+1],z0=m/2-Y[k],z1=m/2-Y[k+1];
+   for(let i=0;i<q;i++)cells.push([[-w0/2+w0*i/q,z0],[-w0/2+w0*(i+1)/q,z0],[-w1/2+w1*(i+1)/q,z1],[-w1/2+w1*i/q,z1]]);}
+  const xm=-c/2+.5;
+  return{A,f:`(a + c) / 2 · m = (${a} + ${c}) / 2 · ${m}`,cells,dims:[[`a = ${a}`,[0,0,m/2+.65]],[`c = ${c}`,[c/2+.9,0,-m/2]],[`m = ${m}`,[xm,0,0]]],aux:[[xm,m/2,xm,-m/2]]};}
+};
+function tri(a,m,s){const A=a*m/2;if(A%1)return'Háromszög: az a·m/2 alapterület nem egész – legalább az egyik szám legyen páros.';
+  const r=nearDiv(A,m),q=A/r,x0=-a/2,px=x0+s,cells=[];
+  for(let k=0;k<r;k++){const s0=Math.sqrt(1-k/r),s1=Math.sqrt(1-(k+1)/r),y0=m*(1-s0),y1=m*(1-s1),w0=a*s0,w1=a*s1,l0=x0+(px-x0)*y0/m,l1=x0+(px-x0)*y1/m,z0=m/2-y0,z1=m/2-y1;
+   for(let i=0;i<q;i++)cells.push([[l0+w0*i/q,z0],[l0+w0*(i+1)/q,z0],[l1+w1*(i+1)/q,z1],[l1+w1*i/q,z1]]);}
+  return{A,cells,px};}
+function prep(q0){
+  const q=q0.filter((p,i)=>{const r=q0[(i+1)%q0.length];return Math.hypot(p[0]-r[0],p[1]-r[1])>1e-9;}),k=q.length;
+  const cx=q.reduce((s,p)=>s+p[0],0)/k,cz=q.reduce((s,p)=>s+p[1],0)/k,l=q.map(p=>[p[0]-cx,p[1]-cz]);
+  const V=[...l.map(p=>[p[0],-.5,p[1]]),...l.map(p=>[p[0],.5,p[1]])],R=[...Array(k).keys()];
+  const F=[{i:R.map(j=>k+j),n:[0,1,0]},{i:R.map(j=>k-1-j),n:[0,-1,0]}];
+  for(let i=0;i<k;i++){const j=(i+1)%k,ex=l[j][0]-l[i][0],ez=l[j][1]-l[i][1],ln=Math.hypot(ex,ez);let nx=ez/ln,nz=-ex/ln;
+    if(nx*(l[i][0]+l[j][0])+nz*(l[i][1]+l[j][1])<0){nx=-nx;nz=-nz;}F.push({i:[i,j,j+k,i+k],n:[nx,0,nz]});}
+  F.forEach(f=>f.c=[0,1,2].map(a=>f.i.reduce((s,kk)=>s+V[kk][a],0)/f.i.length));
+  return{cx,cz,V,F};
+}
+
+// ---- idővonal (a rétegek és a magasság számától függ) ----
+function timeline(N,n){
+  const ci=Math.min(.45,Math.max(.12,6/N)),capT=1+(N-1)*ci+.65,S1=capT+2,la=L=>S1+1+(L-1)*2.4;
+  const endL=n>1?la(n-1)+1.4:S1+1,capT2=endL+.3,S2=capT2+2.6,h0=S2+.8,hs=S2+6.5,hc=hs+1.3+n*.35,S3=hc+3.5;
+  const cnt=k=>S3+2.5+k*1.4,f0=cnt(n-1)+2.2;
+  return{ci,capT,S1,la,capT2,S2,h0,capA:S2+2,hs,hc,S3,cnt,f0,T:f0+6.5};
+}
+let sh,N,n,TM,S=[0,1,2,3],cubes=[],cellsD=[],segs=[],aux=[],tags=[],mx=1,mz=1,zF=1,zT=1,K=[];
+let sbs,reveals,c1,c2,c4;
+const on3=t=>ease((t-(TM.S2+1.8))/.5)*(1-ease((t-(TM.hs-.6))/.6)),offB=t=>1-ease((t-(TM.S3+.5))/.6);
+function tag(txt,pos,c,f,tc){const el=document.createElement('div');el.className='tag';el.textContent=txt;el.style.setProperty('--c',c);if(tc)el.style.setProperty('--tc',tc);tagsEl.appendChild(el);tags.push({el,p:pos,f});}
+
+function panelHTML(){
+  const cu=sh.cube,w=cu?'kocka':'elem',T=TM,r=x=>x.toFixed(2);
+  return `<div class="sb"><div class="h">1. lépés / 4 · Az alsó réteg kirakása</div><div class="line" id="c1"></div>
+   <div class="line big b" data-a="${r(T.capT)}">${N} egység${w} fér el egy rétegben.</div>
+   ${cu?'':'<div class="line note" data-a="0.3">Egységelem: 1 négyzetegység alapterületű, 1 egység magas test – a térfogata 1 köbegység.</div>'}</div>
+  <div class="sb"><div class="h">2. lépés / 4 · Azonos rétegek egymásra rakása</div><div class="line" id="c2"></div>
+   <div class="line big" data-a="${r(T.capT2)}">${n} réteg, mint egy emeletes ház szintjei.</div></div>
+  <div class="sb"><div class="h">3. lépés / 4 · Alapterület és magasság</div>
+   <div class="line big b" data-a="${r(T.capA)}">Alapterület = ${N} négyzetegység</div>
+   <div class="line note" data-a="${r(T.capA+.8)}" style="font-size:15px">T = ${sh.f} = ${N}</div>
+   <div class="line big o" data-a="${r(T.hc)}">Magasság = ${n} egység</div></div>
+  <div class="sb"><div class="h">4. lépés / 4 · Térfogat</div>
+   <div class="line big" data-a="${r(T.S3+1)}">Térfogat = <span class="b">Alapterület</span> × <span class="o">Magasság</span></div>
+   <div class="line" id="c4" data-a="${r(T.S3+2.3)}"></div>
+   <div class="line big"><span data-a="${r(T.f0)}">Térfogat = </span><span data-a="${r(T.f0+.7)}" class="b">${N}</span><span data-a="${r(T.f0+1.5)}"> × </span><span data-a="${r(T.f0+1.9)}" class="o">${n}</span><span data-a="${r(T.f0+2.8)}"> = </span><span data-a="${r(T.f0+3.3)}" style="font-size:1.25em">${N*n}</span><span data-a="${r(T.f0+4)}"> köbegység</span></div></div>`;
+}
+
+function build(){
+  const r=MK[key](PV[key]);
+  if(typeof r==='string'){$('#err').textContent=r;return false;}
+  if(r.A>60){$('#err').textContent='Az alapterület legyen legfeljebb 60 négyzetegység.';return false;}
+  $('#err').textContent='';
+  sh=r;N=r.A;n=H;TM=timeline(N,n);S=[0,TM.S1,TM.S2,TM.S3];
+  mx=0;mz=0;segs=[];
+  cellsD=r.cells.map(q=>{q.forEach((p,i)=>{mx=Math.max(mx,Math.abs(p[0]));mz=Math.max(mz,Math.abs(p[1]));segs.push([p[0],p[1],q[(i+1)%4][0],q[(i+1)%4][1]]);});return prep(q);});
+  cubes=[];for(let L=0;L<n;L++)cellsD.forEach((c,i)=>cubes.push({c,L,y:L+.5,a:L?TM.la(L)+i*.03:1+i*TM.ci,dur:L?1.4:.5}));
+  aux=r.aux;
+  zF=.85*Math.max(.9,2*mx/5,2*mz/3.6);zT=Math.max(zF,.81*n/4);const aw=(key==='rombusz'||key==='romboid')?-.5:mx>1.4*mz?.55:1,ev=sh.cube?24:36;
+  K=[[0,25,52,8.5,.4,0],[TM.S1-1,32*aw,46,9,.4,0],[TM.S1+2.5,38*aw,30,14,1.9,1],[TM.S2-1,45*aw,28,14,1.9,1],[TM.S2+3,58*aw,ev,13.5,1.9,1],[TM.S3-1,70*aw,ev,13.5,1.9,1],[TM.S3+4,80,24,13,1.9,1],[TM.T,150,26,13,1.9,1]];
+  tagsEl.innerHTML='';tags=[];
+  for(let L=0;L<n;L++){const a=L?TM.la(L)+.9:TM.capT+.2;tag((L+1)+'. réteg',[mx+1,L+.5,mz+.4],LH[L%8],t=>ease((t-a)/.5)*(1-ease((t-(TM.S2+.1))/.6)),'#1f2933');}
+  r.dims.forEach(d=>tag(d[0],d[1],'#1971c2',on3));
+  for(let k=1;k<=n;k++)tag(String(k),[mx+.5,k,mz+.3],'#e8590c',t=>ease((t-TM.hs-.6-k*.35)/.4)*offB(t));
+  tag(n+' egység',[mx+1.5,n/2,mz+.3],'#e8590c',t=>ease((t-TM.hc)/.5)*offB(t));
+  $('#panel').innerHTML=panelHTML();
+  sbs=$$('.sb');reveals=$$('[data-a]');c1=$('#c1');c2=$('#c2');c4=$('#c4');
+  return true;
+}
+
+// ---- egyszerű 3D megjelenítő (Canvas 2D, festő-algoritmus) ----
+let dAz=0,dEl=0,W=800,Hh=500,fit=1,CP,RT,UP,FW,FL=1;
+const norm=v=>{const l=Math.hypot(...v);return v.map(x=>x/l)},cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+function setCam(t){
+  let i=0;while(i<K.length-2&&t>K[i+1][0])i++;
+  const a=K[i],b=K[i+1],f=ease((t-a[0])/(b[0]-a[0])),v=a.map((x,j)=>x+(b[j]-x)*f);
+  const az=(v[1]+dAz)*Math.PI/180,el=Math.min(80,Math.max(6,v[2]+dEl))*Math.PI/180,r=v[3]*fit*(zF+(zT-zF)*v[5]),ty=v[4]>1?v[4]*n/4:v[4];
+  CP=[r*Math.cos(el)*Math.sin(az),ty+r*Math.sin(el),r*Math.cos(el)*Math.cos(az)];
+  FW=norm([-CP[0],ty-CP[1],-CP[2]]);RT=norm(cross(FW,[0,1,0]));UP=cross(RT,FW);FL=(Hh/2)/Math.tan(19*Math.PI/180);
+}
+function P(x,y,z){const d=[x-CP[0],y-CP[1],z-CP[2]],zf=dot(d,FW);return[W/2+FL*dot(d,RT)/zf,Hh/2-FL*dot(d,UP)/zf,zf];}
+const LH=['#6cc3a0','#f6c344','#f08a5d','#b07cc6','#e57399','#9ccc65','#c9a27e','#8d99ae'],LC=LH.map(h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16))),BL=[25,113,194],mix=(a,b,t)=>a.map((x,i)=>x+(b[i]-x)*t),LD=norm([.5,1,.7]);
+function line(p,q,w,c){ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.lineWidth=w;ctx.strokeStyle=c;ctx.stroke();}
+
+function draw(t){
+  const blue=ease((t-TM.h0)/.8)*(1-ease((t-(TM.S3-.8))/.8)),dim=ease((t-TM.h0)/.8)*(1-ease((t-(TM.S2+6))/.8));
+  ctx.clearRect(0,0,W,Hh);ctx.lineCap='round';ctx.lineJoin='round';
+  const pw=mx+.8,pz=mz+.8;ctx.beginPath();[[-pw,-pz],[pw,-pz],[pw,pz],[-pw,pz]].forEach((p,i)=>{const q=P(p[0],-.02,p[1]);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);});
+  ctx.closePath();ctx.fillStyle='#f1f3f5';ctx.fill();
+  const ga=ease(t/.8);segs.forEach(s=>line(P(s[0],.01,s[1]),P(s[2],.01,s[3]),1,`rgba(125,138,150,${ga})`));
+  const oa=on3(t);if(oa>0.01)aux.forEach(s=>line(P(s[0],.04,s[1]),P(s[2],.04,s[3]),3.5,`rgba(25,113,194,${oa})`));
+  const prims=[];
+  for(const c of cubes){
+    const p=ease((t-c.a)/c.dur);if(p<=0)continue;const cs=ease((t-(TM.S3+2.2))/.5);
+    const s=c.L?1:.3+.7*p,yc=c.y+(c.L?(1-p)*3:0),ct=ease((t-TM.cnt(c.L))/.5),hi=c.L?0:blue,fade=c.L?1-.8*dim:1;
+    const base=mix(LC[c.L%8],BL,hi),f4=1-.5*cs*(1-ct),al=p*(.3+.34*hi+.2*ct)*fade*f4,ea=p*(.55+.3*hi)*fade*Math.min(1,f4+.4*ct);
+    const pr=c.c.V.map(v=>P(c.c.cx+s*v[0],yc+s*v[1],c.c.cz+s*v[2]));
+    for(const f of c.c.F){
+      const fc=[c.c.cx+s*f.c[0],yc+s*f.c[1],c.c.cz+s*f.c[2]];
+      if(dot(f.n,[CP[0]-fc[0],CP[1]-fc[1],CP[2]-fc[2]])<=0)continue;
+      const sh2=.72+.4*Math.max(0,dot(f.n,LD)),col=base.map(x=>Math.min(255,x*sh2)|0);
+      prims.push({d:f.i.reduce((q,k)=>q+pr[k][2],0)/f.i.length,k:0,pts:f.i.map(k=>pr[k]),fill:`rgba(${col},${al})`,ed:`rgba(43,58,66,${ea})`});
+    }
+  }
+  const g=ease((t-TM.hs)/1.5),ba=offB(t);
+  if(g>0&&ba>0){const bx=mx+.7,bz=mz+.3,gh=n*g,col=`rgba(232,89,12,${ba})`;
+    for(let y=0;y<gh;y+=1){const a=P(bx,y,bz),b=P(bx,Math.min(y+1,gh),bz);prims.push({d:(a[2]+b[2])/2-.3,k:1,pts:[a,b],w:5,col});}
+    for(let k=0;k<=gh+1e-6&&k<=n;k++){const a=P(bx-.25,k,bz),b=P(bx+.25,k,bz);prims.push({d:(a[2]+b[2])/2-.3,k:1,pts:[a,b],w:4,col});}}
+  prims.sort((a,b)=>b.d-a.d);
+  for(const q of prims){
+    if(q.k){line(q.pts[0],q.pts[1],q.w,q.col);continue;}
+    ctx.beginPath();q.pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();
+    ctx.fillStyle=q.fill;ctx.fill();ctx.lineWidth=1.2;ctx.strokeStyle=q.ed;ctx.stroke();
+  }
+}
+const txt=(el,s)=>{if(el.textContent!==s)el.textContent=s;};
+function update(t){
+  const si=t>=S[3]?3:t>=S[2]?2:t>=S[1]?1:0;
+  sbs.forEach((e,i)=>e.classList.toggle('on',i===si));
+  reveals.forEach(e=>e.style.opacity=ease((t-+e.dataset.a)/.6));
+  txt(c1,'Lerakott '+(sh.cube?'kockák':'egységelemek')+': '+cubes.filter(c=>!c.L&&c.a<=t).length+' / '+N);
+  let ly=1;for(let L=1;L<n;L++)if(t>=TM.la(L))ly++;txt(c2,'Egymásra rakott rétegek: '+ly+' / '+n);
+  let k=0;for(let L=0;L<n;L++)if(t>=TM.cnt(L))k++;txt(c4,k?k+' réteg × '+N+' = '+N*k+' köbegység':'');
+  $$('[data-s]').forEach((b,i)=>b.classList.toggle('on',i===si));
+  $('#prog i').style.width=(t/TM.T*100)+'%';
+  setCam(t);draw(t);
+  for(const g of tags){const q=P(...g.p);g.el.style.opacity=g.f(t);g.el.style.transform=`translate(${q[0]}px,${q[1]}px) translate(-50%,-50%)`;}
+}
+
+// ---- vezérlés ----
+let t=0,playing=false,manual=true,last=performance.now();
+const stops=()=>[S[1]-.02,S[2]-.02,S[3]-.02,TM.T],atStop=()=>t===0||stops().some(x=>Math.abs(t-x)<1e-3);
+const pp=$('#pp'),lbl=()=>{pp.textContent=playing?'⏸ Szünet':t>=TM.T-1e-3?'↻ Újra':atStop()?(manual?`▶ ${stops().filter(x=>x<=t+1e-3).length+1}. lépés indítása`:(t===0?'▶ Lejátszás':'▶ Folytatás')):'▶ Folytatás';};
+function toggle(){if(t>=TM.T-1e-3){t=0;playing=!manual;}else playing=!playing;lbl();}
+pp.onclick=()=>{pp.blur();toggle();};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();toggle();}else if(e.code==='ArrowRight'&&!playing){e.preventDefault();toggle();}});
+addEventListener('keyup',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT')e.preventDefault();});
+$('#mode').onclick=()=>{manual=!manual;$('#mode').textContent=manual?'Kézi léptetés':'Automatikus lejátszás';$('#mode').classList.toggle('on',manual);lbl();};
+$('#rst').onclick=()=>{t=0;playing=!manual;lbl();};
+$$('[data-s]').forEach(b=>b.onclick=()=>{t=S[+b.dataset.s]+.01;playing=true;lbl();});
+function inputs(){
+  $('#pin').innerHTML=DEF[key].map((d,i)=>`<label>${d[0]} <input type="number" data-i="${i}" min="${d[2]}" max="${d[3]}" value="${PV[key][i]}"></label>`).join('');
+  $$('#pin input').forEach(el=>el.oninput=()=>{const i=+el.dataset.i,d=DEF[key][i],v=Math.round(+el.value);if(!(v>=d[2]&&v<=d[3])){$('#err').textContent=`${d[0]}: ${d[2]} és ${d[3]} közötti egész szám kell.`;return;}PV[key][i]=v;apply();});
+  $$('[data-sh]').forEach(b=>b.classList.toggle('on',b.dataset.sh===key));
+}
+function apply(){if(build()){t=0;playing=!manual;lbl();}}
+$('#hh').oninput=e=>{const v=Math.round(+e.target.value);if(!(v>=2&&v<=8)){$('#err').textContent='Magasság: 2 és 8 közötti egész szám kell.';return;}H=v;apply();};
+$$('[data-sh]').forEach(b=>b.onclick=()=>{key=b.dataset.sh;inputs();apply();});
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;
+  if(playing){const pt=t;t+=dt;if(manual){const st=stops().find(x=>x>pt+1e-6&&x<=t);if(st!==undefined){t=st;playing=false;lbl();}}if(t>=TM.T){t=TM.T;playing=false;lbl();}}
+  update(t);requestAnimationFrame(frame);
+}
+let drag=null;
+cv.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove',e=>{if(!drag)return;dAz-=(e.clientX-drag[0])*.4;dEl+=(e.clientY-drag[1])*.3;drag=[e.clientX,e.clientY];});
+cv.addEventListener('pointerup',()=>drag=null);
+function resize(){W=stage.clientWidth;Hh=stage.clientHeight;const d=Math.min(devicePixelRatio||1,2);cv.width=W*d;cv.height=Hh*d;ctx.setTransform(d,0,0,d,0,0);fit=Math.max(1,1.55/(W/Hh));}
+new ResizeObserver(resize).observe(stage);resize();
+inputs();build();lbl();
+const hm=/[#&]t=([\d.]+)/.exec(location.hash);if(hm){t=+hm[1];playing=false;lbl();}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
