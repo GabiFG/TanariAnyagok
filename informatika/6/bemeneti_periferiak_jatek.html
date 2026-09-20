@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bemeneti perifériák – párosító játék</title>
+<style>
+*{box-sizing:border-box}
+html{font-size:clamp(14px,1.05vw + 8px,24px)}
+body{margin:0;min-height:100vh;min-height:100dvh;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:#1d2b53;background:linear-gradient(160deg,#fff4c9,#ffe0f0 50%,#d6ebff) fixed;display:flex;flex-direction:column;gap:.7rem;padding-bottom:1rem;-webkit-user-select:none;user-select:none}
+header{background:#2b2f77;color:#fff;padding:.6rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center;justify-content:space-between;border-radius:0 0 1.2rem 1.2rem;box-shadow:0 .25rem 0 #1b1e57,0 .6rem 1rem #0003}
+h1{font-size:1.5rem;margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.pill{background:#fff;color:#2b2f77;font-weight:800;padding:.3rem .8rem;border-radius:2rem;font-size:1.05rem;box-shadow:0 .15rem 0 #0003}
+button{font:inherit;font-weight:800;font-size:1.2rem;border:0;border-radius:2rem;padding:.6rem 1.6rem;background:#ff5d8f;color:#fff;box-shadow:0 .25rem 0 #c2185b;cursor:pointer}
+button.sm{font-size:1rem;padding:.3rem .9rem}
+#msg{text-align:center;font-weight:800;font-size:1.15rem;min-height:1.6rem;margin:0 1rem}
+.tray{position:relative;z-index:5;display:flex;flex-wrap:wrap;justify-content:center;gap:.8rem;margin:0 1rem;padding:.8rem;background:#ffffffaa;border-radius:1.3rem}
+.tray:empty{display:none}
+.chip{touch-action:none;cursor:grab;background:#fff;border:.2rem solid #2b2f77;border-radius:1.1rem;padding:.4rem .8rem;display:flex;flex-direction:column;align-items:center;min-width:6.2rem;font-weight:800;font-size:1rem;box-shadow:0 .25rem 0 #2b2f77,0 .5rem .8rem #0003}
+.ic{font-size:2.4rem;line-height:1.1}
+.ic svg{width:1em;height:1em;vertical-align:-.1em}
+.chip.drag{position:relative;z-index:50;cursor:grabbing;box-shadow:0 .8rem 1.4rem #0005}
+.zones{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(.6rem,1.5vw,1.2rem);margin:0 1rem}
+.zone{--h:210;background:hsl(var(--h) 95% 87%);border:.25rem dashed hsl(var(--h) 75% 50%);color:hsl(var(--h) 60% 18%);border-radius:1.4rem;padding:.7rem;display:flex;flex-direction:column;gap:.5rem;box-shadow:0 .3rem 0 hsl(var(--h) 75% 50%),0 .6rem 1rem #0002;transition:transform .15s}
+.zt{display:flex;align-items:center;gap:.6rem}
+.zi{font-size:1.8rem;background:#fff;border-radius:50%;width:3.2rem;height:3.2rem;flex:none;display:grid;place-items:center;box-shadow:inset 0 0 0 .2rem hsl(var(--h) 75% 50%)}
+.zt p{margin:0;font-weight:700;font-size:1.05rem;line-height:1.3}
+.slot{flex:1;min-height:4.4rem;border-radius:1rem;background:#fff8;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#0008;text-align:center;padding:.2rem}
+.zone.over{transform:scale(1.04);border-style:solid}
+.zone.done{--h:140;border-style:solid}
+.slot .chip{flex-direction:row;gap:.5rem;min-width:0;cursor:default;border-color:#22b45a;box-shadow:none;animation:pop .45s cubic-bezier(.34,1.56,.64,1)}
+.slot .ic{font-size:1.8rem}
+.zone.ok{animation:fg .9s ease-out}
+.zone.bad{animation:fr .8s ease-out,sh .5s}
+@keyframes fg{from{background:#5cf08c;box-shadow:0 0 0 .5rem #5cf08c,0 0 2rem #22b45a}}
+@keyframes fr{from{background:#ff6b6b;box-shadow:0 0 0 .5rem #ff6b6b,0 0 2rem #e00}}
+@keyframes sh{20%{transform:translateX(-.5rem)}40%{transform:translateX(.5rem)}60%{transform:translateX(-.4rem)}80%{transform:translateX(.4rem)}}
+.win{position:fixed;inset:0;background:#1d2b53d9;display:none;place-items:center;z-index:100;padding:1rem}
+.win.on{display:grid}
+.card{position:relative;z-index:2;background:#fff;border-radius:2rem;padding:1.5rem 2rem;text-align:center;max-width:36rem;box-shadow:0 .5rem 0 #ffb703,0 1rem 3rem #0006;animation:pop .7s cubic-bezier(.34,1.56,.64,1)}
+.card .tp{font-size:5rem;line-height:1.2;animation:bounce 1s infinite}
+.card h2{font-size:1.7rem;margin:.3rem 0 1rem;line-height:1.3}
+.card .stats{justify-content:center;margin-bottom:1.2rem}
+.card .pill{background:#eef3ff}
+.cf{position:fixed;top:-2rem;width:.8rem;height:1.2rem;z-index:1;animation:fall linear infinite}
+@keyframes fall{to{transform:translateY(115vh) rotate(720deg)}}
+@keyframes pop{from{transform:scale(.3);opacity:0}}
+@keyframes bounce{50%{transform:translateY(-1rem) rotate(8deg)}}
+@media(max-width:900px){.zones{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){.cf,.card .tp{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🖱️ Bemeneti perifériák</h1>
+  <div class="stats">
+    <div class="pill">⭐ Pontszám: <span id="sc">0</span> / <span id="tt"></span></div>
+    <div class="pill">🎯 Próbálkozások: <span id="tr">0</span></div>
+    <div class="pill">⏱️ Idő: <span id="tm">0:00</span></div>
+    <button class="sm" onclick="location.reload()">↻ Újra</button>
+  </div>
+</header>
+<div id="msg">Húzd az eszközt ahhoz a leíráshoz, amelyik hozzá tartozik!</div>
+<div class="tray" id="tray"></div>
+<div class="zones" id="zones"></div>
+<div class="win" id="w">
+  <div class="card">
+    <div class="tp">🏆</div>
+    <h2>🎉 Gratulálok! Minden elemet helyesen soroltál be! 🎉</h2>
+    <div class="stats"><div class="pill">🎯 Próbálkozások: <span id="wt"></span></div><div class="pill">⏱️ Idő: <span id="wm"></span></div></div>
+    <button onclick="location.reload()">🔄 Új játék</button>
+  </div>
+</div>
+<script>
+const SVG={
+ scan:'<svg viewBox="0 0 64 64"><path d="M6 34h52v18a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z" fill="#546e7a"/><path d="M14 34l6-18h30l-4 18z" fill="#eceff1" stroke="#90a4ae" stroke-width="2"/><rect x="10" y="44" width="44" height="4" rx="2" fill="#4fc3f7"/></svg>',
+ wheel:'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#37474f" stroke-width="8"/><circle cx="32" cy="32" r="8" fill="#1e88e5"/><path d="M8 34h16M40 34h16M32 40v17" stroke="#37474f" stroke-width="6" stroke-linecap="round"/></svg>'
+};
+// kulcs, eszköz neve, eszköz ikonja, leírás ikonja, leírás, szín
+const D=[
+ ["bill","Billentyűzet","⌨️","🔤","Betűk, számok és utasítások bevitelére szolgál.",210],
+ ["eger","Egér","🖱️","👆","A kurzor mozgatására és kattintásra használjuk.",280],
+ ["mikr","Mikrofon","🎤","🔊","A hangot rögzíti és a számítógépbe küldi.",30],
+ ["webk","Webkamera","📷","🎬","Képet és videót küld a számítógépnek.",330],
+ ["szke","Szkenner",SVG.scan,"📄","Papíron lévő képet vagy szöveget visz a számítógépbe.",180],
+ ["joys","Joystick","🕹️","👾","Játékok irányítására használjuk.",250],
+ ["korm","Kormány",SVG.wheel,"🏁","Autós játékok irányítására szolgál.",50],
+ ["game","Gamepad","🎮","✋","Kézben tartható játékvezérlő.",300]
+];
+const $=s=>document.querySelector(s);
+const M={ok:["Szuper! 👏","Ügyes vagy! ⭐","Pontosan! 🎯","Kiváló! 🌟"],no:["Hopp! Próbáld újra! 🤔","Nem ez az! Olvasd el a leírást még egyszer! 📖","Majdnem! Gondold végig újra! 💭"]};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+let score=0,tries=0,tm=null,t0=0,sec=0;
+const fmt=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+$("#tt").textContent=D.length;
+
+// felépítés
+D.forEach(d=>{
+ $("#zones").insertAdjacentHTML("beforeend",`<div class="zone" data-k="${d[0]}" style="--h:${d[5]}"><div class="zt"><div class="zi">${d[3]}</div><p>${d[4]}</p></div><div class="slot">Ide húzd az eszközt</div></div>`);
+});
+D.slice().sort(()=>Math.random()-.5).forEach(d=>{
+ $("#tray").insertAdjacentHTML("beforeend",`<div class="chip" data-k="${d[0]}"><span class="ic">${d[2]}</span><span>${d[1]}</span></div>`);
+});
+
+// hang
+let ac;
+function audio(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state==="suspended")ac.resume()}
+function tone(f,at,d,ty,v){if(!ac)return;const t=ac.currentTime+at,o=ac.createOscillator(),g=ac.createGain();o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d)}
+const sGood=()=>[523,659,784].forEach((f,i)=>tone(f,i*.09,.3,"sine",.25));
+const sBad=()=>{tone(200,0,.25,"sawtooth",.15);tone(150,.12,.3,"sawtooth",.15)};
+const sWin=()=>[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,i*.13,.35,"triangle",.25));
+
+// idő
+function start(){if(tm)return;t0=Date.now();tm=setInterval(()=>{sec=Math.round((Date.now()-t0)/1000);$("#tm").textContent=fmt(sec)},500)}
+
+// húzás (egér + érintés)
+let cur=null;
+function under(x,y,el){el.style.pointerEvents="none";const t=document.elementFromPoint(x,y);el.style.pointerEvents="";return t&&t.closest(".zone")}
+document.querySelectorAll(".chip").forEach(c=>{
+ c.addEventListener("pointerdown",e=>{
+  if(c.classList.contains("lock"))return;
+  e.preventDefault();audio();start();
+  cur={c,x:e.clientX,y:e.clientY,z:null};
+  c.setPointerCapture(e.pointerId);c.style.transition="none";c.classList.add("drag");
+ });
+ c.addEventListener("pointermove",e=>{
+  if(!cur||cur.c!==c)return;
+  c.style.transform=`translate(${e.clientX-cur.x}px,${e.clientY-cur.y}px) scale(1.1) rotate(-4deg)`;
+  let z=under(e.clientX,e.clientY,c);if(z&&z.classList.contains("done"))z=null;
+  if(z!==cur.z){if(cur.z)cur.z.classList.remove("over");cur.z=z;if(z)z.classList.add("over")}
+ });
+ const up=e=>{
+  if(!cur||cur.c!==c)return;
+  const z=e.type==="pointerup"?under(e.clientX,e.clientY,c):null;
+  if(cur.z)cur.z.classList.remove("over");
+  cur=null;drop(c,z);
+ };
+ c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
+});
+document.addEventListener("contextmenu",e=>e.preventDefault());
+
+function back(c){
+ c.style.transition="transform .5s cubic-bezier(.34,1.56,.64,1)";c.style.transform="";
+ setTimeout(()=>{c.classList.remove("drag");c.style.transition=""},520);
+}
+function drop(c,z){
+ if(!z||z.classList.contains("done")){back(c);return}
+ tries++;$("#tr").textContent=tries;
+ if(c.dataset.k===z.dataset.k){
+  score++;$("#sc").textContent=score;
+  z.classList.add("done","ok");z.querySelector(".slot").replaceChildren(c);
+  c.classList.remove("drag");c.classList.add("lock");c.style.cssText="";
+  setTimeout(()=>z.classList.remove("ok"),900);
+  sGood();$("#msg").textContent=pick(M.ok);
+  if(score===D.length)setTimeout(win,900);
+ }else{
+  z.classList.add("bad");setTimeout(()=>z.classList.remove("bad"),800);
+  sBad();$("#msg").textContent=pick(M.no);back(c);
+ }
+}
+function win(){
+ clearInterval(tm);sec=Math.round((Date.now()-t0)/1000);
+ $("#wt").textContent=tries;$("#wm").textContent=fmt(sec);
+ const w=$("#w");
+ for(let i=0;i<70;i++){
+  const s=document.createElement("i");s.className="cf";
+  s.style.cssText=`left:${Math.random()*100}vw;background:hsl(${Math.random()*360} 90% 60%);animation-duration:${2.5+Math.random()*3}s;animation-delay:${-Math.random()*4}s`;
+  w.append(s);
+ }
+ w.classList.add("on");sWin();
+}
+</script>
+</body>
+</html>
