@@ -1,1 +1,164 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mennyit nyúlik a rugó?</title>
+<style>
+:root{--bg:#eef1f4;--card:#fff;--ink:#1d2731;--mut:#5c6a78;--acc:#d9480f;--line:#cfd6de;--grid:#dde3ea;--wt:#3a444f;--wtx:#fff;--spr:#6b7783;--ok:#1f7a4d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161c;--card:#1a212a;--ink:#e9eef3;--mut:#94a2b1;--acc:#ff8a4c;--line:#35414e;--grid:#26303b;--wt:#b9c3ce;--wtx:#141a20;--spr:#b4bec9;--ok:#5fd394}}
+:root[data-theme="dark"]{--bg:#11161c;--card:#1a212a;--ink:#e9eef3;--mut:#94a2b1;--acc:#ff8a4c;--line:#35414e;--grid:#26303b;--wt:#b9c3ce;--wtx:#141a20;--spr:#b4bec9;--ok:#5fd394}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;line-height:1.45}
+header{padding:20px 20px 4px;max-width:960px;margin:0 auto}
+h1{font-size:1.6rem;margin:0 0 4px}
+header p{margin:0;color:var(--mut)}
+.wrap{max-width:960px;margin:0 auto;padding:12px 20px 28px;display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:20px}
+@media (max-width:720px){.wrap{grid-template-columns:1fr}}
+.lab{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.lab svg{display:block;width:100%;height:auto}
+.side{display:flex;flex-direction:column;gap:14px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;font-weight:700;padding:10px 16px;border-radius:8px;border:2px solid var(--ink);background:var(--card);color:var(--ink);cursor:pointer}
+button.main{background:var(--ink);color:var(--card)}
+button:hover:not(:disabled){transform:translateY(-1px)}
+button:disabled{opacity:.35;cursor:not-allowed}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.read{display:flex;gap:22px;margin-top:12px;flex-wrap:wrap}
+.read div{min-width:90px}
+.read small{display:block;color:var(--mut)}
+.read b{font-size:1.5rem;font-variant-numeric:tabular-nums}
+.read .big{color:var(--acc)}
+.ask{border-left:4px solid var(--acc);padding-left:12px;margin:0}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:600;font-size:.9rem}
+td.q{color:var(--mut)}
+tr.now td{background:color-mix(in srgb,var(--acc) 14%,transparent)}
+#gr{width:100%;height:auto;display:block}
+#law{margin:8px 0 0;color:var(--ok);font-weight:700;min-height:2.6em}
+.note{font-size:.85rem;color:var(--mut);margin:0}
+</style>
+</head>
+<body>
+<header>
+<h1>Mennyit nyúlik a rugó?</h1>
+<p>Akassz súlyokat a rugóra, és nézd meg, mi történik!</p>
+</header>
+<div class="wrap">
+<div class="lab">
+<svg id="sv" viewBox="0 0 300 520" role="img" aria-label="Felfüggesztett rugó súlyokkal">
+<defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern></defs>
+<rect width="300" height="520" fill="url(#g)"/>
+<rect x="0" y="0" width="300" height="14" fill="#b98a55"/>
+<line x1="0" y1="150" x2="300" y2="150" stroke="var(--mut)" stroke-dasharray="5 4"/>
+<text x="6" y="144" font-size="11" fill="var(--mut)">nyugalmi helyzet (0 cm)</text>
+<g id="ruler"></g>
+<line x1="110" y1="14" x2="110" y2="30" stroke="var(--spr)" stroke-width="3"/>
+<path id="sp" fill="none" stroke="var(--spr)" stroke-width="3" stroke-linejoin="round"/>
+<line id="wire" stroke="var(--spr)" stroke-width="3"/>
+<g id="wts"></g>
+<g id="ptr"><line id="pl" stroke="var(--acc)" stroke-width="2"/><polygon id="pt" fill="var(--acc)"/></g>
+</svg>
+</div>
+<div class="side">
+<div class="box">
+<div class="btns">
+<button class="main" id="add">+ Egy súly (100 g)</button>
+<button id="rem">− Levesz egyet</button>
+<button id="rst">Mérések törlése</button>
+</div>
+<div class="read">
+<div><small>Súlyok</small><b id="rn">0 db</b></div>
+<div><small>Húzóerő</small><b id="rf">0 N</b></div>
+<div><small>Nyúlás</small><b class="big" id="rs">0,0 cm</b></div>
+</div>
+</div>
+<p class="ask box" id="ask">Jósold meg: ha 4 súlyt akasztunk fel, hány cm-t nyúlik a rugó? Először tippelj, aztán próbáld ki!</p>
+<div class="box">
+<table>
+<thead><tr><th>Súlyok száma</th><th>Erő (N)</th><th>Nyúlás (cm)</th></tr></thead>
+<tbody id="tb"></tbody>
+</table>
+<p class="note" style="margin-top:8px">A táblázat akkor tölt ki, amikor a rugó megnyugszik.</p>
+</div>
+<div class="box">
+<svg id="gr" viewBox="0 0 300 200" role="img" aria-label="Nyúlás az erő függvényében"></svg>
+<p id="law"></p>
+<p class="note">Egyszerűsítés: 100 g súly ≈ 1 N erő, a rugó saját tömegét elhanyagoljuk.</p>
+</div>
+</div>
+</div>
+<script>
+const S=6,K=20,MAXN=5,CX=110,L0=120,Y0=150;
+let n=0,y=0,v=0,last=null,rec={},calm=0;
+const $=id=>document.getElementById(id);
+const fmt=x=>x.toFixed(1).replace('.',',');
+
+// skála (vonalzó)
+(function(){let h='';for(let i=0;i<=32;i++){const yy=Y0+i*S,big=i%5===0;
+h+=`<line x1="${big?200:206}" y1="${yy}" x2="240" y2="${yy}" stroke="var(--mut)"/>`;
+if(big)h+=`<text x="246" y="${yy+4}" font-size="11" fill="var(--mut)">${i}</text>`;}
+h+=`<text x="246" y="${Y0-8}" font-size="11" fill="var(--mut)">cm</text><line x1="240" y1="${Y0}" x2="240" y2="${Y0+32*S}" stroke="var(--mut)"/>`;
+$('ruler').innerHTML=h;})();
+
+function coil(len){const T=11,A=24,N=T*18;let p=[];
+for(let i=0;i<=N;i++){const t=i/N,e=Math.min(1,Math.min(t,1-t)*14),th=2*Math.PI*T*t;
+p.push((CX+A*e*Math.sin(th)).toFixed(1)+','+(30+len*t+4*e*Math.cos(th)).toFixed(1));}
+return 'M'+p.join('L');}
+
+function draw(){
+const len=L0+y*S,end=30+len;
+$('sp').setAttribute('d',coil(len));
+$('wire').setAttribute('x1',CX);$('wire').setAttribute('x2',CX);
+$('wire').setAttribute('y1',end);$('wire').setAttribute('y2',end+(n?12:8));
+let w='';for(let i=0;i<n;i++){const wy=end+12+i*34;
+w+=`<rect x="${CX-38}" y="${wy}" width="76" height="32" rx="6" fill="var(--wt)"/><text x="${CX}" y="${wy+21}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--wtx)">100 g</text>`;}
+$('wts').innerHTML=w;
+const py=Y0+y*S;
+$('pl').setAttribute('x1',CX+36);$('pl').setAttribute('x2',236);
+$('pl').setAttribute('y1',end);$('pl').setAttribute('y2',end);
+$('pt').setAttribute('points',`236,${end-5} 246,${end} 236,${end+5}`);
+$('ptr').style.display='';
+$('rs').textContent=fmt(Math.max(0,y))+' cm';
+}
+
+function ui(){
+$('rn').textContent=n+' db';$('rf').textContent=n+' N';
+$('add').disabled=n>=MAXN;$('rem').disabled=n<=0;
+let h='';for(let i=0;i<=MAXN;i++){const r=rec[i];
+h+=`<tr class="${i===n?'now':''}"><td>${i}</td><td>${i}</td><td class="${r==null?'q':''}">${r==null?'?':fmt(r)}</td></tr>`;}
+$('tb').innerHTML=h;
+graph();}
+
+function graph(){
+const X=x=>40+x*44,Yy=c=>170-c*5.6;let h='';
+for(let i=0;i<=5;i++){h+=`<line x1="${X(i)}" y1="20" x2="${X(i)}" y2="170" stroke="var(--grid)"/><text x="${X(i)}" y="186" text-anchor="middle" font-size="11" fill="var(--mut)">${i}</text>`;}
+for(let c=0;c<=25;c+=5){h+=`<line x1="40" y1="${Yy(c)}" x2="260" y2="${Yy(c)}" stroke="var(--grid)"/><text x="34" y="${Yy(c)+4}" text-anchor="end" font-size="11" fill="var(--mut)">${c}</text>`;}
+h+=`<line x1="40" y1="170" x2="260" y2="170" stroke="var(--mut)"/><line x1="40" y1="20" x2="40" y2="170" stroke="var(--mut)"/>`;
+h+=`<text x="150" y="199" text-anchor="middle" font-size="11" fill="var(--mut)">erő (N)</text><text x="6" y="14" font-size="11" fill="var(--mut)">nyúlás (cm)</text>`;
+const ks=Object.keys(rec).map(Number).sort((a,b)=>a-b);
+if(ks.length>1)h+=`<polyline fill="none" stroke="var(--acc)" stroke-width="2" points="${ks.map(k=>X(k)+','+Yy(rec[k])).join(' ')}"/>`;
+ks.forEach(k=>h+=`<circle cx="${X(k)}" cy="${Yy(rec[k])}" r="5" fill="var(--acc)"/>`);
+$('gr').innerHTML=h;
+$('law').textContent=ks.length>=3?'A pontok egy egyenesen vannak! Kétszer akkora erő → kétszer akkora nyúlás. Ezt hívjuk Hooke-törvénynek.':'Mérj minél több súllyal, és nézd, hogyan rajzolódnak ki a pontok!';}
+
+function step(t){
+if(last==null)last=t;
+let dt=Math.min(.05,(t-last)/1000);last=t;
+const m=.05+.1*n,w2=K/m,c=2*.14*Math.sqrt(w2),eq=5*n,h=dt/4;
+for(let i=0;i<4;i++){const a=-w2*(y-eq)-c*v;v+=a*h;y+=v*h;}
+if(Math.abs(y-eq)<.06&&Math.abs(v)<.4){calm+=dt;
+ if(calm>.25){y=eq;v=0;if(rec[n]==null){rec[n]=eq;ui();}}}
+else calm=0;
+draw();requestAnimationFrame(step);}
+
+$('add').onclick=()=>{if(n<MAXN){n++;calm=0;ui();}};
+$('rem').onclick=()=>{if(n>0){n--;calm=0;ui();}};
+$('rst').onclick=()=>{rec={};ui();};
+ui();draw();requestAnimationFrame(step);
+</script>
+</body>
+</html>
 
