@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Hálózati nyomozó</title>
+<style>
+  :root{
+    --ink:#1c2333;
+    --paper:#fff9ec;
+    --blue:#2f6fed;
+    --blue-dark:#1f4fbf;
+    --green:#2fae5a;
+    --green-dark:#1f8a44;
+    --red:#e6493f;
+    --red-dark:#c53228;
+    --gold:#f4b400;
+    --card-shadow: 0 10px 0 rgba(28,35,51,0.15);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    font-family:"Segoe UI Rounded","Segoe UI",Verdana,Arial,sans-serif;
+    background: radial-gradient(circle at 20% 15%, #3d4a7a 0%, #232a4a 45%, #14182c 100%);
+    color:var(--ink);
+    overflow-x:hidden;
+  }
+  .stars{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      radial-gradient(2px 2px at 10% 20%, #ffffff55 50%, transparent 51%),
+      radial-gradient(2px 2px at 80% 10%, #ffffff40 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 60% 70%, #ffffff35 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 30% 85%, #ffffff45 50%, transparent 51%),
+      radial-gradient(2px 2px at 90% 60%, #ffffff30 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 45% 40%, #ffffff30 50%, transparent 51%);
+  }
+  .wrap{
+    position:relative; z-index:1;
+    max-width:760px; margin:0 auto; padding:18px 16px 40px;
+    min-height:100%;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:linear-gradient(180deg,#ffe9a8,#f4c94a);
+    border:3px solid var(--ink);
+    border-radius:18px;
+    padding:12px 18px;
+    box-shadow: var(--card-shadow);
+    flex-wrap:wrap;
+  }
+  header h1{
+    margin:0; font-size:1.35rem; display:flex; align-items:center; gap:10px;
+  }
+  .badge{
+    background:var(--ink); color:#fff9ec; border-radius:999px;
+    padding:6px 14px; font-weight:700; font-size:0.95rem; white-space:nowrap;
+  }
+  .progressbar{
+    height:14px; border-radius:999px; background:#00000022;
+    border:2px solid var(--ink); margin-top:14px; overflow:hidden;
+  }
+  .progressbar > div{
+    height:100%; background:linear-gradient(90deg,var(--green),#57d484);
+    width:0%; transition:width .35s ease;
+  }
+
+  .stage{margin-top:22px;}
+
+  .card{
+    background:var(--paper);
+    border:3px solid var(--ink);
+    border-radius:20px;
+    padding:22px 22px 24px;
+    box-shadow: var(--card-shadow);
+    animation: pop .35s ease;
+  }
+  @keyframes pop{
+    from{ transform:scale(.94) translateY(8px); opacity:0;}
+    to{ transform:scale(1) translateY(0); opacity:1;}
+  }
+  .topic-tag{
+    display:inline-block;
+    background:var(--blue); color:#fff;
+    font-weight:700; font-size:0.8rem;
+    padding:4px 12px; border-radius:999px;
+    margin-bottom:10px;
+    border:2px solid var(--ink);
+  }
+  .case-head{
+    display:flex; align-items:flex-start; gap:14px;
+  }
+  .icon-badge{
+    flex:0 0 auto;
+    width:60px; height:60px; border-radius:16px;
+    background:#fff; border:3px solid var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.9rem;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.15);
+  }
+  .scenario{
+    font-size:1.12rem; line-height:1.5; font-weight:600;
+  }
+  .question{
+    margin-top:12px; font-size:1.05rem; font-weight:700; color:var(--blue-dark);
+  }
+
+  .options{
+    display:grid; gap:12px; margin-top:20px;
+  }
+  .opt{
+    display:flex; align-items:center; gap:12px;
+    text-align:left;
+    font-family:inherit; font-size:1.02rem; font-weight:600;
+    background:#fff; color:var(--ink);
+    border:3px solid var(--ink);
+    border-radius:14px;
+    padding:14px 16px;
+    cursor:pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.18);
+    transition: transform .08s ease, box-shadow .08s ease, background .15s ease;
+  }
+  .opt:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 7px 0 rgba(0,0,0,0.18);}
+  .opt:active:not(:disabled){ transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.18);}
+  .opt:focus-visible{ outline:3px solid var(--blue); outline-offset:2px; }
+  .opt .key{
+    flex:0 0 auto;
+    width:28px; height:28px; border-radius:8px;
+    background:var(--ink); color:#fff9ec;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.85rem; font-weight:800;
+  }
+  .opt:disabled{ cursor:default; opacity:0.55; }
+  .opt.correct{
+    background:linear-gradient(180deg,#d6f5e1,#bdeecb);
+    border-color:var(--green-dark);
+    box-shadow:0 5px 0 var(--green-dark);
+    opacity:1;
+  }
+  .opt.correct .key{ background:var(--green-dark); }
+  .opt.wrong{
+    background:linear-gradient(180deg,#ffdcd8,#ffc4bd);
+    border-color:var(--red-dark);
+    box-shadow:0 5px 0 var(--red-dark);
+    opacity:1;
+    animation: shake .4s ease;
+  }
+  .opt.wrong .key{ background:var(--red-dark); }
+  @keyframes shake{
+    10%,90%{ transform:translateX(-2px);}
+    20%,80%{ transform:translateX(4px);}
+    30%,50%,70%{ transform:translateX(-8px);}
+    40%,60%{ transform:translateX(8px);}
+  }
+
+  .feedback{
+    margin-top:18px;
+    border-radius:14px;
+    padding:14px 16px;
+    border:3px solid var(--ink);
+    font-size:1rem; line-height:1.45;
+    display:none;
+  }
+  .feedback.show{ display:block; animation:pop .3s ease; }
+  .feedback.ok{ background:#d6f5e1; }
+  .feedback.bad{ background:#ffe6d6; }
+  .feedback strong.verdict{ display:block; margin-bottom:4px; font-size:1.05rem; }
+  .ok .verdict{ color:var(--green-dark); }
+  .bad .verdict{ color:#a15200; }
+
+  .next-btn{
+    margin-top:16px;
+    font-family:inherit; font-weight:800; font-size:1.05rem;
+    background:var(--blue); color:#fff;
+    border:3px solid var(--ink);
+    border-radius:14px;
+    padding:12px 22px;
+    cursor:pointer;
+    box-shadow:0 5px 0 var(--blue-dark);
+    display:none;
+  }
+  .next-btn.show{ display:inline-flex; align-items:center; gap:8px; animation:pop .3s ease;}
+  .next-btn:hover{ transform:translateY(-2px);}
+  .next-btn:active{ transform:translateY(2px); box-shadow:0 2px 0 var(--blue-dark);}
+  .next-btn:focus-visible{ outline:3px solid #fff; outline-offset:2px;}
+
+  .hint{
+    margin-top:10px; font-size:0.85rem; color:#5a6070;
+  }
+
+  /* End screen */
+  .end-card{
+    text-align:center;
+  }
+  .trophy{ font-size:3.2rem; }
+  .score-big{
+    font-size:2.4rem; font-weight:800; color:var(--blue-dark); margin:6px 0 2px;
+  }
+  .score-sub{ color:#555; margin-bottom:18px; }
+  .review-list{
+    text-align:left; list-style:none; padding:0; margin:0 0 18px;
+    display:grid; gap:8px;
+  }
+  .review-list li{
+    background:#fff3e0; border:2px solid var(--ink); border-radius:10px;
+    padding:8px 12px; font-size:0.92rem;
+  }
+  .review-list li.perfect{ background:#e4f8ea; }
+  .restart-btn{
+    font-family:inherit; font-weight:800; font-size:1.1rem;
+    background:var(--gold); color:var(--ink);
+    border:3px solid var(--ink);
+    border-radius:14px;
+    padding:14px 28px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #b5820a;
+  }
+  .restart-btn:hover{ transform:translateY(-2px);}
+  .restart-btn:active{ transform:translateY(2px); box-shadow:0 2px 0 #b5820a;}
+
+  footer.note{
+    text-align:center; color:#c9cde0; font-size:0.78rem; margin-top:22px;
+  }
+
+  @media (max-width:480px){
+    header h1{ font-size:1.1rem; }
+    .scenario{ font-size:1.03rem; }
+    .icon-badge{ width:50px; height:50px; font-size:1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+<div class="wrap">
+  <header>
+    <h1>🕵️ Hálózati nyomozó</h1>
+    <div class="badge" id="progressBadge">1. eset / 10</div>
+  </header>
+  <div class="progressbar"><div id="progressFill"></div></div>
+
+  <div class="stage" id="stage"></div>
+
+  <footer class="note">Ez a játék teljesen offline fut, semmilyen adatot nem küld el és nem kér nevet.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CASES = [
+    {
+      topic: "Helyi hálózat (LAN)",
+      icon: "🏫",
+      scenario: "A számítástechnika teremben nyolc gép van egymással vezetékkel összekötve. A gépek látják egymást és fájlokat cserélnek, de a terembe éppen nincs internet-kapcsolat bekötve.",
+      question: "Milyen típusú hálózatról van szó?",
+      options: [
+        {label:"Helyi hálózat (LAN)", correct:true},
+        {label:"Internet (WAN)", correct:false},
+        {label:"Doménnév", correct:false},
+        {label:"E-mail cím", correct:false}
+      ],
+      explanation: "A helyi hálózat (LAN) néhány, egymáshoz közeli eszközt köt össze egy kisebb területen – ehhez nem feltétlenül szükséges internet-kapcsolat."
+    },
+    {
+      topic: "Internet",
+      icon: "🌍",
+      scenario: "Anna otthonról videóhívást indít a külföldön élő nagynénjével. A hívás az egész világot behálózó, egymáshoz kapcsolódó hálózatokon keresztül jut el hozzá.",
+      question: "Ez melyik hálózat segítségével történik?",
+      options: [
+        {label:"Internet (WAN)", correct:true},
+        {label:"Helyi hálózat (LAN)", correct:false},
+        {label:"Megosztott mappa", correct:false},
+        {label:"Hálózati nyomtató", correct:false}
+      ],
+      explanation: "Az internet a Föld szinte összes hálózatát összekapcsoló, világméretű hálózatok hálózata – ez teszi lehetővé a nagy távolságú kapcsolatot."
+    },
+    {
+      topic: "Közös nyomtató",
+      icon: "🖨️",
+      scenario: "A tanteremben lévő öt számítógépről is el lehet küldeni a nyomtatási munkát ugyanarra az egyetlen nyomtatóra, amely a hálózaton keresztül érhető el.",
+      question: "Milyen eszközt használnak ehhez?",
+      options: [
+        {label:"Hálózati nyomtató", correct:true},
+        {label:"IP-cím", correct:false},
+        {label:"Doménnév", correct:false},
+        {label:"Megosztott mappa", correct:false}
+      ],
+      explanation: "A hálózati nyomtató a hálózaton keresztül több gépről is elérhető, így nem kell minden számítógéphez külön nyomtatót vásárolni."
+    },
+    {
+      topic: "Megosztott mappa",
+      icon: "📁",
+      scenario: "A tanár létrehoz egy mappát a szerveren, ahonnan minden diák a saját gépéről hozzáfér a tananyagokhoz, sőt közösen is dolgozhatnak benne.",
+      question: "Mi ennek a megoldásnak a neve?",
+      options: [
+        {label:"Megosztott mappa", correct:true},
+        {label:"Doménnév", correct:false},
+        {label:"IP-cím", correct:false},
+        {label:"Webcím (URL)", correct:false}
+      ],
+      explanation: "A megosztott mappa a hálózaton keresztül több felhasználó számára is elérhető közös tárhely, ahol együtt lehet fájlokat kezelni."
+    },
+    {
+      topic: "Hozzáférési jog: olvasás",
+      icon: "📄",
+      scenario: "Anna megnyitja a közös mappában lévő fájlt, el is tudja olvasni, de amikor megpróbálja átírni és menteni, a rendszer nem engedi.",
+      question: "Milyen joga van Annának a fájlhoz?",
+      options: [
+        {label:"Olvasási jog (Read)", correct:true},
+        {label:"Írási jog (Write)", correct:false},
+        {label:"Teljes hozzáférés", correct:false},
+        {label:"Nincs semmilyen hozzáférése", correct:false}
+      ],
+      explanation: "Az olvasási jog (Read) csak a fájl megtekintését engedélyezi, a módosítást és a mentést nem."
+    },
+    {
+      topic: "IP-cím",
+      icon: "🔢",
+      scenario: "Minden hálózatra kapcsolt eszköznek van egy egyedi számsora, amely alapján a hálózat pontosan beazonosítja, például: 192.168.1.5.",
+      question: "Mi ennek a számsornak a neve?",
+      options: [
+        {label:"IP-cím", correct:true},
+        {label:"Doménnév", correct:false},
+        {label:"Webcím (URL)", correct:false},
+        {label:"E-mail cím", correct:false}
+      ],
+      explanation: "Az IP-cím egy egyedi számsorozat, amely azonosítja az eszközt a hálózaton belül."
+    },
+    {
+      topic: "Doménnév",
+      icon: "🔤",
+      scenario: "Ahelyett, hogy egy hosszú, nehezen megjegyezhető számsort (IP-címet) kellene beírnunk, egy könnyen megjegyezhető nevet gépelünk be, például: google.com.",
+      question: "Mi ennek a névnek a szakszava?",
+      options: [
+        {label:"Doménnév", correct:true},
+        {label:"IP-cím", correct:false},
+        {label:"Felhasználónév", correct:false},
+        {label:"Protokoll", correct:false}
+      ],
+      explanation: "A doménnév egy könnyen megjegyezhető, betűkből álló név, amelyet a rendszer egy IP-címhez rendel; fontos, hogy a doménnév nem feltétlenül azonos magának a szervergépnek a nevével, csak egy emberek számára kényelmes azonosító."
+    },
+    {
+      topic: "Webcím (URL)",
+      icon: "🔗",
+      scenario: "Az iskola honlapjának címe ez: https://iskola.sk",
+      question: "Az „iskola.sk” a webcím melyik része?",
+      options: [
+        {label:"Doménnév", correct:true},
+        {label:"Protokoll", correct:false},
+        {label:"Felhasználónév", correct:false},
+        {label:"IP-cím", correct:false}
+      ],
+      explanation: "A webcímben (URL) az „iskola.sk” a doménnév, a „https://” pedig a biztonságos kapcsolatot jelző protokoll neve."
+    },
+    {
+      topic: "E-mail cím",
+      icon: "✉️",
+      scenario: "Egy diák e-mail címe így néz ki: diak.peter@iskola.hu",
+      question: "Mit jelöl ebben a „@” (kukac) jel?",
+      options: [
+        {label:"Elválasztja a felhasználónevet a levelezőszerver címétől", correct:true},
+        {label:"Ez a jelszó helye", correct:false},
+        {label:"Ez egy fájlkiterjesztés", correct:false},
+        {label:"Ez a doménnév rövidítése", correct:false}
+      ],
+      explanation: "A „@” jel választja el az egyedi felhasználónevet (diak.peter) a levelezőszerver címétől, vagyis a doméntől (iskola.hu)."
+    },
+    {
+      topic: "Előnyök és hátrányok",
+      icon: "🦠",
+      scenario: "Az iskolai hálózat egyik gépére vírus kerül egy fertőzött pendrive-ról, és onnan gyorsan átterjed a hálózatra kötött többi gépre is.",
+      question: "Ez a hálózatok melyik tulajdonságát mutatja meg?",
+      options: [
+        {label:"Hátrány: biztonsági kockázat", correct:true},
+        {label:"Előny: gyors adatcsere", correct:false},
+        {label:"Ez a gép doménneve", correct:false},
+        {label:"Ez a gép IP-címe", correct:false}
+      ],
+      explanation: "A hálózatok egyik hátránya, hogy egy fertőzött eszközről a vírusok könnyen átterjedhetnek a hálózatra kapcsolt többi gépre is."
+    }
+  ];
+
+  var state = {
+    idx: 0,
+    score: 0,
+    missed: [], // topics that needed a retry
+    answeredThisCase: false
+  };
+
+  var stage = document.getElementById("stage");
+  var progressBadge = document.getElementById("progressBadge");
+  var progressFill = document.getElementById("progressFill");
+
+  function renderCase(i){
+    state.answeredThisCase = false;
+    var wrongOnThisCase = false;
+    var c = CASES[i];
+    progressBadge.textContent = (i+1) + ". eset / " + CASES.length;
+    progressFill.style.width = Math.round((i / CASES.length) * 100) + "%";
+
+    var html = ''
+      + '<div class="card" role="group" aria-label="' + escapeHtml(c.topic) + '">'
+      + '  <span class="topic-tag">' + escapeHtml(c.topic) + '</span>'
+      + '  <div class="case-head">'
+      + '    <div class="icon-badge" aria-hidden="true">' + c.icon + '</div>'
+      + '    <div class="scenario">' + escapeHtml(c.scenario) + '</div>'
+      + '  </div>'
+      + '  <div class="question">' + escapeHtml(c.question) + '</div>'
+      + '  <div class="options" id="optionsBox"></div>'
+      + '  <div class="feedback" id="feedbackBox"></div>'
+      + '  <button class="next-btn" id="nextBtn" type="button">Következő eset ➜</button>'
+      + '  <div class="hint">💡 Tipp: kattints, koppints, vagy nyomd meg az 1–4 számbillentyűk egyikét.</div>'
+      + '</div>';
+    stage.innerHTML = html;
+
+    var optionsBox = document.getElementById("optionsBox");
+    var feedbackBox = document.getElementById("feedbackBox");
+    var nextBtn = document.getElementById("nextBtn");
+
+    var order = c.options.map(function(o,idx){ return idx; });
+    for (var s = order.length - 1; s > 0; s--){
+      var r = Math.floor(Math.random() * (s+1));
+      var tmp = order[s]; order[s] = order[r]; order[r] = tmp;
+    }
+
+    order.forEach(function(oi, pos){
+      var opt = c.options[oi];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "opt";
+      btn.setAttribute("data-idx", oi);
+      btn.innerHTML = '<span class="key">' + (pos+1) + '</span><span>' + escapeHtml(opt.label) + '</span>';
+      btn.addEventListener("click", function(){ handleAnswer(oi); });
+      optionsBox.appendChild(btn);
+    });
+
+    function handleAnswer(oi){
+      var opt = c.options[oi];
+      var btn = optionsBox.querySelector('[data-idx="' + oi + '"]');
+      if (opt.correct){
+        btn.classList.add("correct");
+        Array.prototype.forEach.call(optionsBox.children, function(b){ b.disabled = true; });
+        feedbackBox.className = "feedback ok show";
+        feedbackBox.innerHTML = '<strong class="verdict">✅ Helyes nyomozás!</strong>' + escapeHtml(c.explanation);
+        nextBtn.classList.add("show");
+        nextBtn.focus();
+        if (!state.answeredThisCase){
+          state.answeredThisCase = true;
+          if (!wrongOnThisCase){ state.score++; }
+          else { state.missed.push(c.topic); }
+        }
+      } else {
+        btn.classList.add("wrong");
+        btn.disabled = true;
+        wrongOnThisCase = true;
+        feedbackBox.className = "feedback bad show";
+        feedbackBox.innerHTML = '<strong class="verdict">🔍 Még nem ez a nyom. Próbáld újra!</strong>' + escapeHtml(c.explanation);
+      }
+    }
+
+    nextBtn.addEventListener("click", goNext);
+
+    function goNext(){
+      if (i + 1 < CASES.length){
+        renderCase(i+1);
+      } else {
+        renderEnd();
+      }
+    }
+
+    window.__handleKey = function(e){
+      if (!state.answeredThisCase && /^[1-9]$/.test(e.key)){
+        var pos = parseInt(e.key,10) - 1;
+        if (pos < order.length){
+          var btnEl = optionsBox.children[pos];
+          if (btnEl && !btnEl.disabled) btnEl.click();
+        }
+      } else if (state.answeredThisCase && e.key === "Enter"){
+        goNext();
+      }
+    };
+  }
+
+  function renderEnd(){
+    progressBadge.textContent = "Nyomozás lezárva";
+    progressFill.style.width = "100%";
+    var total = CASES.length;
+    var pct = Math.round((state.score/total)*100);
+    var verdict;
+    if (state.score === total) verdict = "🏆 Kiváló munka, igazi hálózati nyomozó vagy!";
+    else if (state.score >= total*0.7) verdict = "👍 Szép munka, jó nyomon jársz!";
+    else verdict = "🧭 Ne add fel, egy kis gyakorlással még ügyesebb nyomozó leszel!";
+
+    var missedList = "";
+    if (state.missed.length === 0){
+      missedList = '<ul class="review-list"><li class="perfect">🎉 Egyetlen esetnél sem kellett újra próbálkozni!</li></ul>';
+    } else {
+      missedList = '<ul class="review-list">' + state.missed.map(function(t){
+        return '<li>🔁 Újra kellett próbálkozni ennél az esetnél: <strong>' + escapeHtml(t) + '</strong></li>';
+      }).join("") + '</ul>';
+    }
+
+    stage.innerHTML = ''
+      + '<div class="card end-card">'
+      + '  <div class="trophy">🕵️‍♀️🏅</div>'
+      + '  <div class="score-big">' + state.score + ' / ' + total + ' pont</div>'
+      + '  <div class="score-sub">' + verdict + ' (' + pct + '%)</div>'
+      + missedList
+      + '  <button class="restart-btn" id="restartBtn" type="button">🔁 Új nyomozás indítása</button>'
+      + '</div>';
+
+    document.getElementById("restartBtn").addEventListener("click", function(){
+      state.score = 0;
+      state.missed = [];
+      renderCase(0);
+    });
+
+    window.__handleKey = null;
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  document.addEventListener("keydown", function(e){
+    if (typeof window.__handleKey === "function") window.__handleKey(e);
+  });
+
+  renderCase(0);
+})();
+</script>
+</body>
+</html>
