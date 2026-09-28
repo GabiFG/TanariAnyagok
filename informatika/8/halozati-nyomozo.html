@@ -256,8 +256,8 @@
       options: [
         {label:"Helyi hálózat (LAN)", correct:true},
         {label:"Internet (WAN)", correct:false},
-        {label:"Doménnév", correct:false},
-        {label:"E-mail cím", correct:false}
+        {label:"Városi hálózat (MAN)", correct:false},
+        {label:"Egyik sem", correct:false}
       ],
       explanation: "A helyi hálózat (LAN) néhány, egymáshoz közeli eszközt köt össze egy kisebb területen – ehhez nem feltétlenül szükséges internet-kapcsolat."
     },
@@ -269,8 +269,8 @@
       options: [
         {label:"Internet (WAN)", correct:true},
         {label:"Helyi hálózat (LAN)", correct:false},
-        {label:"Megosztott mappa", correct:false},
-        {label:"Hálózati nyomtató", correct:false}
+        {label:"Városi hálózat (MAN)", correct:false},
+        {label:"Messenger", correct:false}
       ],
       explanation: "Az internet a Föld szinte összes hálózatát összekapcsoló, világméretű hálózatok hálózata – ez teszi lehetővé a nagy távolságú kapcsolatot."
     },
@@ -281,7 +281,7 @@
       question: "Milyen eszközt használnak ehhez?",
       options: [
         {label:"Hálózati nyomtató", correct:true},
-        {label:"IP-cím", correct:false},
+        {label:"Nyomtató hálózati kapcsolat nélkül", correct:false},
         {label:"Doménnév", correct:false},
         {label:"Megosztott mappa", correct:false}
       ],
@@ -342,7 +342,7 @@
     {
       topic: "Webcím (URL)",
       icon: "🔗",
-      scenario: "Az iskola honlapjának címe ez: https://iskola.sk",
+      scenario: "Az iskola honlapjának címe ez: https://www.iskola.sk",
       question: "Az „iskola.sk” a webcím melyik része?",
       options: [
         {label:"Doménnév", correct:true},
