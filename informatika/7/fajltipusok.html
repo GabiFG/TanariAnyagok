@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Párosítsd a fájlokat</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  background:#4facfe;
+  background:-webkit-linear-gradient(315deg,#4facfe,#00f2fe);
+  background:linear-gradient(135deg,#4facfe,#00f2fe);
+  background-attachment:fixed;
+  height:100vh;height:100dvh;
+  padding:8px 10px;
+  display:-webkit-flex;display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-text-size-adjust:100%;
+}
+header{flex:0 0 auto;text-align:center;color:#fff}
+h1{font-size:clamp(16px,min(3.6vh,4.4vw),32px);line-height:1.15}
+.sub{font-size:clamp(11px,min(2.2vh,2.8vw),18px);margin-top:2px;opacity:.95}
+.bar{flex:0 0 auto;display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}
+.counter{background:#fff;padding:4px 12px;border-radius:10px;font-size:clamp(12px,min(2.6vh,3.4vw),20px);font-weight:bold;white-space:nowrap}
+button{background:#ff9800;color:#fff;border:0;border-radius:10px;padding:5px 14px;font-size:clamp(12px,min(2.6vh,3.4vw),20px);font-weight:bold;cursor:pointer;font-family:inherit}
+button:active{background:#e68900}
+main{
+  flex:1 1 auto;min-height:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);
+  gap:10px;
+}
+.panel{min-height:0;display:flex;flex-direction:column}
+.ptitle{flex:0 0 auto;text-align:center;color:#fff;font-weight:bold;font-size:clamp(14px,min(3vh,3.6vw),24px);margin-bottom:4px}
+#files{
+  flex:1 1 auto;min-height:0;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(7,minmax(0,1fr));
+  gap:6px;
+}
+#targets{
+  flex:1 1 auto;min-height:0;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(4,minmax(0,1fr));
+  gap:6px;
+}
+#targets .dropzone:nth-child(7){grid-column:1 / span 2}
+.file-card{
+  background:#fff;border:3px solid #2196f3;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;font-weight:bold;
+  font-size:clamp(12px,min(2.7vh,2.4vw),22px);
+  padding:2px 6px;min-width:0;min-height:0;
+  max-height:60px;align-self:center;width:100%;
+  word-break:break-all;overflow:hidden;
+  cursor:grab;touch-action:none;
+}
+.file-card.dragging{opacity:.3}
+.file-card.ghost{
+  position:fixed;z-index:1000;margin:0;pointer-events:none;
+  box-shadow:0 8px 20px rgba(0,0,0,.35);opacity:.95;cursor:grabbing;
+}
+.dropzone{
+  background:#fff;border:3px dashed #777;border-radius:10px;
+  padding:5px 6px;min-height:0;overflow:hidden;
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px;
+}
+.catTitle{width:100%;font-weight:bold;font-size:clamp(12px,min(2.8vh,2.8vw),22px);line-height:1.1}
+.dropzone.highlight{background:#e3f2fd;border-color:#2196f3}
+.dropzone.wrong{animation:flash .4s}
+@keyframes flash{0%{background:#ff5252}100%{background:#fff}}
+.dropzone .file-card{
+  width:auto;max-height:none;align-self:auto;cursor:default;touch-action:auto;
+  font-size:clamp(10px,min(2.1vh,2vw),17px);padding:2px 7px;border-width:2px;
+}
+.file-card.correct{background:#4caf50;color:#fff;border-color:#2e7d32}
+#overlay{
+  display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:2000;
+  background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:20px;
+}
+#overlay .box{background:#fff;border-radius:16px;padding:24px 28px;text-align:center;font-weight:bold;font-size:clamp(18px,4vh,30px);max-width:90vw}
+#overlay button{margin-top:16px;font-size:clamp(16px,3vh,22px);padding:8px 20px}
+@media (max-width:700px){
+  main{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:6px}
+  #files{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(14,minmax(0,1fr));gap:3px}
+  .file-card{font-size:clamp(10px,min(2.2vh,3.2vw),16px);border-width:2px;max-height:44px}
+  #targets{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(7,minmax(0,1fr))}
+  #targets .dropzone:nth-child(7){grid-column:auto}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>📂 Párosítsd a fájlokat!</h1>
+  <div class="sub">Nézd meg a kiterjesztésüket, és húzd a megfelelő kategóriába!</div>
+</header>
+<div class="bar">
+  <div class="counter">Helyes: <span id="c">0</span> / <span id="t">0</span></div>
+  <div class="counter">Próbálkozások: <span id="a">0</span></div>
+  <button type="button" id="newBtn">🔄 Új játék</button>
+</div>
+<main>
+  <section class="panel"><div class="ptitle">Fájlok</div><div id="files"></div></section>
+  <section class="panel"><div class="ptitle">Kategóriák</div><div id="targets"></div></section>
+</main>
+<div id="overlay"><div class="box"><div id="omsg"></div><button type="button" id="again">🔄 Új játék</button></div></div>
+
+<script>
+(function(){
+var fileList=[
+  {name:'málna.gif',type:'Kép fájlok'},
+  {name:'alma.docx',type:'Szöveg fájlok'},
+  {name:'cseresznye.pdf',type:'Szöveg fájlok'},
+  {name:'körte.mp4',type:'Videó fájlok'},
+  {name:'dinnye.txt',type:'Szöveg fájlok'},
+  {name:'eper.bmp',type:'Kép fájlok'},
+  {name:'banán.html',type:'Weblap'},
+  {name:'áfonya.exe',type:'Program fájlok'},
+  {name:'kivi.mp3',type:'Zene fájlok'},
+  {name:'egres.xlsx',type:'Táblázat fájlok'},
+  {name:'narancs.jpg',type:'Kép fájlok'},
+  {name:'citrom.avi',type:'Videó fájlok'},
+  {name:'mandarin.png',type:'Kép fájlok'},
+  {name:'mangó.wav',type:'Zene fájlok'}
+];
+var cats=['Kép fájlok','Szöveg fájlok','Táblázat fájlok','Zene fájlok','Videó fájlok','Program fájlok','Weblap'];
+var total=fileList.length,correct=0,attempts=0,startTime=0,drag=null;
+var $=function(id){return document.getElementById(id)};
+
+function shuffle(arr){
+  var a=arr.slice(),i,j,t;
+  for(i=a.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=a[i];a[i]=a[j];a[j]=t}
+  return a;
+}
+function update(){$('c').textContent=correct;$('a').textContent=attempts;$('t').textContent=total}
+
+function zoneAt(x,y){
+  var el=document.elementFromPoint(x,y);
+  return el&&el.closest?el.closest('.dropzone'):null;
+}
+function setHighlight(z){
+  var all=document.querySelectorAll('.dropzone.highlight'),i;
+  for(i=0;i<all.length;i++)if(all[i]!==z)all[i].classList.remove('highlight');
+  if(z)z.classList.add('highlight');
+}
+function onDown(e){
+  var card=e.currentTarget;
+  if(card.classList.contains('placed')||(e.pointerType==='mouse'&&e.button!==0))return;
+  e.preventDefault();
+  var r=card.getBoundingClientRect(),ghost=card.cloneNode(true);
+  ghost.removeAttribute('id');
+  ghost.classList.add('ghost');
+  ghost.style.width=r.width+'px';ghost.style.height=r.height+'px';
+  ghost.style.left=r.left+'px';ghost.style.top=r.top+'px';
+  document.body.appendChild(ghost);
+  card.classList.add('dragging');
+  drag={card:card,ghost:ghost,dx:e.clientX-r.left,dy:e.clientY-r.top};
+  document.addEventListener('pointermove',onMove);
+  document.addEventListener('pointerup',onUp);
+  document.addEventListener('pointercancel',onCancel);
+}
+function onMove(e){
+  if(!drag)return;
+  e.preventDefault();
+  drag.ghost.style.left=(e.clientX-drag.dx)+'px';
+  drag.ghost.style.top=(e.clientY-drag.dy)+'px';
+  setHighlight(zoneAt(e.clientX,e.clientY));
+}
+function endDrag(){
+  document.removeEventListener('pointermove',onMove);
+  document.removeEventListener('pointerup',onUp);
+  document.removeEventListener('pointercancel',onCancel);
+  if(drag){
+    if(drag.ghost.parentNode)drag.ghost.parentNode.removeChild(drag.ghost);
+    drag.card.classList.remove('dragging');
+  }
+  setHighlight(null);
+}
+function onCancel(){endDrag();drag=null}
+function onUp(e){
+  if(!drag)return;
+  var card=drag.card,z=zoneAt(e.clientX,e.clientY);
+  endDrag();drag=null;
+  if(!z)return;
+  attempts++;
+  if(card.dataset.type===z.dataset.cat){
+    card.classList.add('correct','placed');
+    z.appendChild(card);
+    correct++;
+    if(correct===total){
+      var s=Math.floor((Date.now()-startTime)/1000);
+      $('omsg').innerHTML='🎉 Gratulálok!<br>Mind a '+total+' párosítás sikerült!<br><br>⏱️ Eltelt idő: '+s+' másodperc';
+      $('overlay').style.display='flex';
+    }
+  }else{
+    z.classList.remove('wrong');
+    void z.offsetWidth;
+    z.classList.add('wrong');
+    setTimeout(function(){z.classList.remove('wrong')},400);
+  }
+  update();
+}
+
+function newGame(){
+  correct=0;attempts=0;startTime=Date.now();
+  $('overlay').style.display='none';
+  var fd=$('files'),td=$('targets');
+  fd.innerHTML='';td.innerHTML='';
+  shuffle(fileList).forEach(function(f,i){
+    var d=document.createElement('div');
+    d.className='file-card';d.id='f'+i;d.textContent=f.name;d.dataset.type=f.type;
+    d.addEventListener('pointerdown',onDown);
+    fd.appendChild(d);
+  });
+  shuffle(cats).forEach(function(cat){
+    var z=document.createElement('div');
+    z.className='dropzone';z.dataset.cat=cat;
+    var t=document.createElement('div');
+    t.className='catTitle';t.textContent=cat;
+    z.appendChild(t);td.appendChild(z);
+  });
+  update();
+}
+$('newBtn').addEventListener('click',newGame);
+$('again').addEventListener('click',newGame);
+newGame();
+})();
+</script>
+</body>
+</html>
