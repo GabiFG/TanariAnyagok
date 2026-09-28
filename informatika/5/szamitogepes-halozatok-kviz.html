@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Számítógépes hálózatok – kvíz</title>
+<style>
+*{box-sizing:border-box}
+html{font-size:clamp(11px,min(2.6vh,2.5vw),48px)}
+html,body{height:100%}
+body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#1e3a8a,#7c3aed);display:flex;align-items:center;justify-content:center;padding:1.2vh 1.2vw;color:#1f2937;overflow:hidden}
+.card{background:#fff;border-radius:1.2rem;width:min(100%,68rem);max-height:100%;overflow:auto;padding:1.1rem 2rem;box-shadow:0 .6rem 2rem rgba(0,0,0,.35)}
+#quiz{display:flex;flex-direction:column}
+h1{margin:0;font-size:2rem;color:#1e3a8a;text-align:center;line-height:1.2}
+.sub{display:none}
+.bar{height:.8rem;background:#e5e7eb;border-radius:.4rem;overflow:hidden;margin:.6rem 0 .3rem}
+.bar div{height:100%;background:linear-gradient(90deg,#f59e0b,#ef4444);width:0;transition:width .4s}
+.info{display:flex;justify-content:space-between;font-size:1.05rem;font-weight:600;color:#6b7280;margin-bottom:.4rem}
+.q{font-size:1.9rem;font-weight:700;margin:.3rem 0 .8rem;line-height:1.25;color:#111827}
+.opt{display:flex;align-items:center;gap:1rem;width:100%;text-align:left;font:inherit;font-size:1.4rem;line-height:1.25;padding:.65rem 1rem;margin-bottom:.7rem;border:.22rem solid transparent;border-radius:.9rem;cursor:pointer;color:#111827;transition:transform .1s}
+.opt:hover:not(:disabled){transform:scale(1.012)}
+.opt .l{flex:none;width:2.4rem;height:2.4rem;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem}
+.o0{background:#dbeafe;border-color:#3b82f6}.o0 .l{color:#1d4ed8}
+.o1{background:#fef3c7;border-color:#f59e0b}.o1 .l{color:#b45309}
+.o2{background:#fce7f3;border-color:#ec4899}.o2 .l{color:#be185d}
+.opt.ok{background:#16a34a!important;border-color:#166534!important;color:#fff}
+.opt.no{background:#dc2626!important;border-color:#7f1d1d!important;color:#fff}
+.opt:disabled{cursor:default}
+.bottom{display:flex;gap:1rem;align-items:center;min-height:4.4rem;flex-wrap:wrap}
+.fb{flex:1 1 20rem;padding:.6rem 1rem;border-radius:.9rem;font-size:1.2rem;line-height:1.35;visibility:hidden}
+.fb.good{visibility:visible;background:#dcfce7;color:#14532d}
+.fb.bad{visibility:visible;background:#fee2e2;color:#7f1d1d}
+.btn{font:inherit;font-size:1.4rem;font-weight:700;padding:.7rem 2rem;border:0;border-radius:.8rem;background:#1e3a8a;color:#fff;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#312e81}
+.btn.hide{visibility:hidden;display:block}
+.res{text-align:center;padding:2rem 0}
+.res .btn{margin:1rem auto 0}
+.score{font-size:5rem;font-weight:800;color:#7c3aed;margin:.5rem 0}
+.msg{font-size:1.6rem;margin-bottom:.5rem}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="quiz">
+    <h1>🌐 Számítógépes hálózatok</h1>
+        <div class="bar"><div id="prog"></div></div>
+    <div class="info"><span id="num"></span><span id="sc"></span></div>
+    <div class="q" id="q"></div>
+    <div id="opts"></div>
+    <div class="bottom"><div class="fb" id="fb"></div>
+    <button class="btn hide" id="next">Következő ▶</button></div>
+  </div>
+  <div class="res hide" id="res">
+    <h1>🎉 Vége a kvíznek!</h1>
+    <div class="score" id="final"></div>
+    <div class="msg" id="msg"></div>
+    <button class="btn" id="again">🔄 Újrakezdés</button>
+  </div>
+</div>
+<script>
+// Minden kérdés: [kérdés, helyes válasz, rossz1, rossz2, magyarázat]
+var Q=[
+["Mi a számítógépes hálózat?","Egymással összekötött számítógépek és eszközök","Egyetlen nagyon nagy számítógép","Egy program, amivel rajzolni lehet","A hálózat azt jelenti, hogy a számítógépek össze vannak kötve, így tudnak egymással kommunikálni."],
+["Mit oszthatunk meg hálózaton?","Fájlt, képet, nyomtatót","Csak a billentyűzet gombjait","Csak a monitor színeit","Hálózaton fájlokat, képeket és például nyomtatót is megoszthatunk."],
+["Mi az internet?","Világméretű számítógépes hálózat","Egy iskolai számítógépterem","Egy böngészőprogram","Az internet az egész világot behálózó, óriási számítógépes hálózat."],
+["Hol található a saját gépre mentett fájl?","A saját számítógépünk tárolóján","Az interneten, a felhőben","Az iskola nyomtatójában","A saját gépre mentett fájl a saját számítógépünkön van."],
+["Hol található a OneDrive-ba mentett fájl?","Az interneten, a felhőben","Csak a saját gépünk merevlemezén","A billentyűzet memóriájában","A OneDrive-ba mentett fájl az interneten, a felhőben tárolódik."],
+["Miben különbözik a saját gépre és a OneDrive-ba mentett fájl elérése?","A OneDrive-hoz internet és bejelentkezés kell","A saját gépen lévő fájlhoz kell internet, a OneDrive-hoz nem","A OneDrive-ról csak nyomtatóval érhetjük el a fájlt","A OneDrive-ban lévő fájlt interneten át, bejelentkezéssel érjük el, a saját gépen lévőt közvetlenül."],
+["Mire szolgál egy cím vagy útvonal?","Megmutatja, hol található a fájl vagy a weboldal","Megmutatja, milyen gyors a számítógép","Megmutatja, ki rajzolta a képet","A cím vagy útvonal megmutatja, hol található az, amit keresünk."],
+["Mi a hálózati meghajtó?","Másik gépen lévő tárhely, amit a hálózaton át érünk el","Egy nyomtató tintapatronja","Egy program képek szerkesztésére","A hálózati meghajtó másik gépen lévő tárhely, amelyet a hálózaton keresztül használhatunk."],
+["Mit jelent a letöltés (download)? Milyen irányban kerül át a fájl?","Az internetről a saját gépünkre kerül a fájl","A saját gépünkről az internetre kerül a fájl","Az egyik nyomtatóról a másikra kerül a fájl","Letöltéskor a fájl az internetről a saját gépünkre érkezik."],
+["Mit jelent a feltöltés (upload)? Milyen irányban kerül át a fájl?","A saját gépünkről az internetre kerül a fájl","Az internetről a saját gépünkre kerül a fájl","Az egyik mappából a másikba kerül ugyanazon a gépen","Feltöltéskor a fájl a saját gépünkről az internetre kerül."],
+["Egy internetes kép saját gépre mentése letöltés vagy feltöltés?","Letöltés","Feltöltés","Egyik sem, ez csak nyomtatás","A kép az internetről a saját gépünkre kerül, ezért letöltés."],
+["Egy saját rajz OneDrive-ba helyezése letöltés vagy feltöltés?","Feltöltés","Letöltés","Egyik sem, ez csak másolás a képernyőre","A rajz a saját gépünkről a OneDrive-ba, az internetre kerül, ezért feltöltés."],
+["Mire szolgál a webcím (URL)?","Megmutatja, hol van a weboldal az interneten","Megmutatja, hány fájl van a gépünkön","Megmutatja, ki írt e-mailt nekünk","A webcím (URL) megadja a weboldal helyét az interneten."],
+["Mivel nyitunk meg egy webcímet?","Böngészővel, például Chrome-mal vagy Edge-dzsel","Rajzprogrammal, például Painttel","Számológéppel","A webcímet böngészővel nyitjuk meg, például Chrome-mal vagy Edge-dzsel."],
+["Mire szolgál az e-mail-cím?","E-mailek küldésére és fogadására","Weboldalak megnyitására","Fájlok nyomtatására","Az e-mail-cím olyan, mint egy postafiók címe: erre érkeznek az e-mailek, és innen küldhetünk levelet."],
+["Milyen alkalmazással írhatunk e-mailt?","Outlookkal vagy Gmaillel","Painttel vagy rajzprogrammal","Zenelejátszóval","E-mailt például Outlookkal vagy Gmaillel írhatunk."],
+["Milyen típusú cím a www.iskola.hu?","Webcím","E-mail-cím","Nyomtatócím","A www-vel kezdődő cím webcím, böngészőben nyitjuk meg."],
+["Milyen típusú cím a diak@iskola.hu?","E-mail-cím","Webcím","Mappa útvonala","A @ jel miatt ez e-mail-cím."],
+["Milyen típusú cím a https://onedrive.live.com?","Webcím","E-mail-cím","Nyomtató neve","A https://-sel kezdődő cím webcím (URL), böngészőben nyitjuk meg."],
+["Melyik jel szerepel az e-mail-címekben?","@","#","&","Minden e-mail-címben van @ jel, ez választja el a nevet és a szolgáltatót."]
+];
+// A helyes válasz helye (0=A, 1=B, 2=C) kérdésenként
+var POS=[1,0,2,1,2,0,2,1,0,2,1,0,2,0,1,2,0,1,2,1];
+var i=0,score=0,done=false,L=["A","B","C"];
+var $=function(id){return document.getElementById(id)};
+function show(){
+  var d=Q[i],opts=[],w=[d[2],d[3]],k=0;
+  for(var p=0;p<3;p++){opts.push(p===POS[i]?d[1]:w[k++])}
+  done=false;
+  $("num").textContent=(i+1)+". kérdés / "+Q.length;
+  $("sc").textContent="Pontszám: "+score;
+  $("prog").style.width=(i/Q.length*100)+"%";
+  $("q").textContent=d[0];
+  $("fb").className="fb";$("next").className="btn hide";
+  var box=$("opts");box.innerHTML="";
+  opts.forEach(function(t,p){
+    var b=document.createElement("button");
+    b.className="opt o"+p;
+    b.innerHTML='<span class="l">'+L[p]+'</span><span></span>';
+    b.lastChild.textContent=t;
+    b.onclick=function(){pick(p)};
+    box.appendChild(b);
+  });
+}
+function pick(p){
+  if(done)return;done=true;
+  var ok=p===POS[i],bs=$("opts").children;
+  for(var j=0;j<3;j++){bs[j].disabled=true}
+  bs[POS[i]].classList.add("ok");
+  if(ok)score++;else bs[p].classList.add("no");
+  var fb=$("fb");
+  fb.className="fb "+(ok?"good":"bad");
+  fb.textContent=(ok?"✅ Helyes! ":"❌ Nem ez a jó válasz. ")+Q[i][4];
+  $("sc").textContent="Pontszám: "+score;
+  $("next").textContent=i===Q.length-1?"Eredmény ▶":"Következő ▶";
+  $("next").className="btn";
+}
+$("next").onclick=function(){
+  i++;
+  if(i>=Q.length){finish()}else show();
+};
+function finish(){
+  $("quiz").className="hide";$("res").className="res";
+  $("final").textContent=score+" / "+Q.length;
+  var r=score/Q.length,m;
+  if(r===1)m="Tökéletes! Igazi hálózati szakértő vagy! 🏆";
+  else if(r>=0.8)m="Nagyon ügyes! Már majdnem mindent tudsz. 🌟";
+  else if(r>=0.6)m="Jó munka! Még egy kis gyakorlás, és tökéletes lesz. 👍";
+  else m="Ne add fel! Nézd át újra a tananyagot, és próbáld meg még egyszer. 💪";
+  $("msg").textContent=m;
+}
+$("again").onclick=function(){
+  i=0;score=0;$("res").className="res hide";$("quiz").className="";show();
+};
+document.addEventListener("keydown",function(e){
+  var k=e.key.toLowerCase(),p=["a","b","c"].indexOf(k);
+  if(p>-1&&!done&&!$("quiz").classList.contains("hide"))pick(p);
+  else if((k==="enter"||k==="arrowright")&&done&&!$("next").classList.contains("hide"))$("next").click();
+});
+show();
+</script>
+</body>
+</html>
