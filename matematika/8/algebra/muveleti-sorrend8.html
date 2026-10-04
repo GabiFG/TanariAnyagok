@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Műveleti sorrend – színes levezetés</title>
+<style>
+:root{--c0:#ef476f;--c1:#118ab2;--c2:#06a77d;--c3:#f4a300;--c4:#8e44ad;--ink:#26304a}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--ink);background:linear-gradient(135deg,#e3f4ff,#ffeaf2 55%,#fff7d6);min-height:100vh}
+.wrap{max-width:920px;margin:0 auto;padding:16px}
+h1{text-align:center;font-size:clamp(24px,5vw,36px);margin:6px 0 12px}
+.rules{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px}
+.rule{color:#fff;font-weight:700;padding:8px 14px;border-radius:14px;font-size:15px}
+.r0{background:#8e44ad}.r1{background:#f4731a}.r2{background:#118ab2}
+.input{background:#fff;border-radius:18px;padding:12px;box-shadow:0 4px 0 #26304a22}
+.input input{width:100%;font-size:clamp(18px,4vw,24px);padding:10px 12px;border:3px solid #26304a33;border-radius:12px;font-family:inherit;color:var(--ink)}
+.input input:focus{outline:none;border-color:var(--c1)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button{font-family:inherit;font-size:16px;font-weight:700;border:0;border-radius:12px;padding:10px 16px;cursor:pointer;color:#fff;background:var(--c1);transition:transform .15s}
+button:hover:not(:disabled){transform:translateY(-2px) scale(1.04)}
+button:disabled{opacity:.4;cursor:default}
+button.go{background:var(--c2)}button.next{background:var(--c0)}button.alt{background:#6c7a99}
+.ex{background:#fff;color:var(--ink);border:2px dashed #26304a44;font-weight:600;font-size:14px}
+.err{color:#c92a2a;font-weight:700;margin-top:8px;min-height:1em}
+.stage{background:#fff;border-radius:20px;padding:14px 16px;margin:16px 0;border-left:10px solid;animation:slide .5s both;box-shadow:0 4px 0 #26304a22}
+.stage.ph0{border-color:#8e44ad}.stage.ph1{border-color:#f4731a}.stage.ph2{border-color:#118ab2}
+.shead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px}
+.badge{color:#fff;font-weight:800;padding:5px 12px;border-radius:999px}
+.ph0 .badge{background:#8e44ad}.ph1 .badge{background:#f4731a}.ph2 .badge{background:#118ab2}
+.hint{font-size:14px;opacity:.8}
+.lbl{font-size:13px;opacity:.65;margin:6px 0 2px}
+.line{font-size:clamp(18px,4.2vw,30px);font-weight:700;line-height:2;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px}
+.grp{display:inline-flex;gap:8px;padding:0 10px;border-radius:12px;border:3px solid var(--c);background:color-mix(in srgb,var(--c) 18%,white)}
+.a .grp{animation:blink 3.5s ease-in-out infinite}
+.b .grp{animation:pop 1.2s both;animation-delay:var(--d)}
+.notes{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{color:#fff;font-weight:700;padding:6px 12px;border-radius:12px;background:var(--c);font-size:clamp(14px,3.4vw,18px);animation:pop 1.1s both;animation-delay:var(--d)}
+.arrow{font-size:16px;font-weight:700;opacity:.7;animation:fade .4s both;animation-delay:var(--d)}
+.b .tok{animation:fade 1s both;animation-delay:var(--d)}
+.res{text-align:center;font-size:clamp(28px,8vw,52px);font-weight:900;color:#fff;background:linear-gradient(90deg,var(--c2),var(--c1));padding:14px;border-radius:22px;margin:16px 0;animation:bounce .9s both}
+@keyframes slide{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes pop{0%{opacity:0;transform:scale(.2) rotate(-8deg)}70%{transform:scale(1.15)}100%{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes bounce{0%{opacity:0;transform:translateY(-60px)}50%{transform:translateY(0)}65%{transform:translateY(-18px)}80%{transform:translateY(0)}90%{transform:translateY(-6px)}100%{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Műveleti sorrend – lépésről lépésre</h1>
+<div class="rules">
+<span class="rule r0">1. Zárójel ( )</span>
+<span class="rule r1">2. Szorzás · és osztás :</span>
+<span class="rule r2">3. Összeadás + és kivonás −</span>
+</div>
+<div class="input">
+<input id="inp" value="-4 · (-3 + 7) - (18 - 53) : (-7) + 3 · (-4)" aria-label="Kifejezés" autocomplete="off">
+<div class="row">
+<button class="go" id="go">Megoldás</button>
+<button class="next" id="next" disabled>Következő lépés ▶</button>
+<button class="alt" id="all" disabled>Mind egyszerre</button>
+<button class="ex" data-e="(12 - 20) · 3 - 24 : (-6)">példa 1</button>
+<button class="ex" data-e="-5 · (2 - 7) + 18 : (-3) - (-4)">példa 2</button>
+<button class="ex" data-e="2 · (3 + (4 - 6) · 5) - 7">példa 3</button>
+</div>
+<div class="err" id="err"></div>
+</div>
+<div id="out"></div>
+</div>
+<script>
+const OPS={'+':'+','-':'−','*':'·',':':':'};
+const fmt=v=>String(Math.round(v*1e6)/1e6).replace('.',',').replace('-','−');
+const isMD=x=>x&&x.k==='op'&&(x.v==='*'||x.v===':');
+
+function tokenize(src){
+  const s=src.replace(/\s+/g,'').replace(/[\[{]/g,'(').replace(/[\]}]/g,')').replace(/[·×xX*]/g,'*').replace(/[÷\/:]/g,':').replace(/[−–]/g,'-').replace(/,/g,'.');
+  if(!s)throw 'Írj be egy kifejezést!';
+  const t=[];let i=0;const prev=()=>t[t.length-1];
+  const glue=()=>{const p=prev();if(p&&(p.k==='num'||p.k===')'))t.push({k:'op',v:'*'});};
+  while(i<s.length){
+    const c=s[i];
+    if(/[0-9.]/.test(c)){const m=s.slice(i).match(/^\d+(\.\d+)?/);if(!m)throw 'Hibás szám.';glue();t.push({k:'num',v:parseFloat(m[0])});i+=m[0].length;continue;}
+    if(c==='('){glue();t.push({k:'('});i++;continue;}
+    if(c===')'){t.push({k:')'});i++;continue;}
+    if('+-*:'.includes(c)){
+      const p=prev();
+      if(!p||p.k==='op'||p.k==='('){
+        if(c==='+'){i++;continue;}
+        if(c==='-'){
+          const m=s.slice(i+1).match(/^\d+(\.\d+)?/);
+          if(m){t.push({k:'num',v:-parseFloat(m[0])});i+=1+m[0].length;continue;}
+          if(s[i+1]==='('){t.push({k:'num',v:-1},{k:'op',v:'*'});i++;continue;}
+        }
+        throw 'Hibás kifejezés: két művelet követi egymást.';
+      }
+      t.push({k:'op',v:c});i++;continue;
+    }
+    throw 'Ismeretlen jel: '+c;
+  }
+  return t;
+}
+function validate(t){
+  let exp=true,d=0;
+  for(const x of t){
+    if(exp){if(x.k==='num')exp=false;else if(x.k==='(')d++;else throw 'Hibás kifejezés.';}
+    else{if(x.k==='op')exp=true;else if(x.k===')'){if(--d<0)throw 'Zárójel hiba.';}else throw 'Hibás kifejezés.';}
+  }
+  if(exp||d!==0)throw 'Hibás kifejezés (hiányzó szám, művelet vagy zárójel).';
+}
+function collapse(t){
+  let ch=true;
+  while(ch){ch=false;for(let i=0;i+2<t.length;i++)if(t[i].k==='('&&t[i+1].k==='num'&&t[i+2].k===')'){t.splice(i,3,t[i+1]);ch=true;break;}}
+  return t;
+}
+function txt(items,wrap){
+  return items.map((x,i)=>{
+    if(x.k==='num'){const s=fmt(x.v),p=items[i-1];return(x.v<0&&(wrap||(p&&p.k==='op')))?'('+s+')':s;}
+    return x.k==='op'?OPS[x.v]:x.k;
+  }).join(' ').replace(/\( /g,'(').replace(/ \)/g,')');
+}
+function evalFlat(a){
+  const v=[a[0].v],o=[];
+  for(let i=1;i<a.length;i+=2){
+    const op=a[i].v,n=a[i+1].v;
+    if(op==='*')v[v.length-1]*=n;
+    else if(op===':'){if(n===0)throw 'Nullával nem lehet osztani!';v[v.length-1]/=n;}
+    else{o.push(op);v.push(n);}
+  }
+  let r=v[0];o.forEach((op,i)=>r=op==='+'?r+v[i+1]:r-v[i+1]);
+  return r;
+}
+function nextStage(t){
+  const before=[],after=[],out=[],notes=[];let g=0,phase,title,hint;
+  const keep=x=>{before.push({...x,g:null});after.push({...x,g:null});out.push(x);};
+  if(t.some(x=>x.k==='(')){
+    phase=0;title='1. lépés: zárójelek';hint='A zárójelen belül számolok, utána újraírom a sort.';
+    for(let i=0;i<t.length;){
+      if(t[i].k==='('){
+        let j=i+1;while(j<t.length&&t[j].k!=='('&&t[j].k!==')')j++;
+        if(t[j]&&t[j].k===')'){
+          const inner=t.slice(i+1,j),v=evalFlat(inner),n={k:'num',v};
+          for(let q=i;q<=j;q++)before.push({...t[q],g});
+          after.push({...n,g});out.push(n);
+          notes.push({g,text:'('+txt(inner)+') = '+fmt(v)});g++;i=j+1;continue;
+        }
+      }
+      keep(t[i]);i++;
+    }
+  }else if(t.some(isMD)){
+    phase=1;title='2. lépés: szorzás és osztás';hint='Balról jobbra haladok, az összeadás és kivonás előtt.';
+    for(let i=0;i<t.length;){
+      if(t[i].k==='num'&&isMD(t[i+1])){
+        let j=i,v=t[i].v;
+        while(isMD(t[j+1])){const n=t[j+2].v;if(t[j+1].v==='*')v*=n;else{if(n===0)throw 'Nullával nem lehet osztani!';v/=n;}j+=2;}
+        const run=t.slice(i,j+1),n={k:'num',v};
+        run.forEach(x=>before.push({...x,g}));after.push({...n,g});out.push(n);
+        notes.push({g,text:txt(run,true)+' = '+fmt(v)});g++;i=j+1;
+      }else{keep(t[i]);i++;}
+    }
+  }else{
+    phase=2;title='3. lépés: összeadás és kivonás';hint='Balról jobbra haladok, így kapom a végeredményt.';
+    let acc=t[0].v;
+    for(let i=1;i<t.length;i+=2){
+      const n=t[i+1].v,r=t[i].v==='+'?acc+n:acc-n;
+      notes.push({g:0,text:txt([{k:'num',v:acc},t[i],t[i+1]])+' = '+fmt(r)});acc=r;
+    }
+    t.forEach(x=>before.push({...x,g:0}));
+    const n={k:'num',v:acc};after.push({...n,g:0});out.push(n);
+  }
+  return{phase,title,hint,before,after,out,notes};
+}
+function lineEl(items,cls,delay){
+  const d=document.createElement('div');d.className='line '+cls;
+  let cur=null,cg=null;
+  items.forEach((x,i)=>{
+    const sp=document.createElement('span');sp.className='tok';
+    if(x.k==='num'){const p=items[i-1],s=fmt(x.v);sp.textContent=(x.v<0&&p&&p.k==='op')?'('+s+')':s;}
+    else sp.textContent=x.k==='op'?OPS[x.v]:x.k;
+    if(x.g!=null){
+      if(!cur||cg!==x.g){cur=document.createElement('span');cur.className='grp';cur.style.setProperty('--c','var(--c'+(x.g%5)+')');if(delay!=null)cur.style.setProperty('--d',delay+'s');cg=x.g;d.appendChild(cur);}
+      cur.appendChild(sp);
+    }else{cur=null;cg=null;if(delay!=null)sp.style.setProperty('--d',delay+'s');d.appendChild(sp);}
+  });
+  return d;
+}
+function stageEl(s){
+  const el=document.createElement('div');el.className='stage ph'+s.phase;
+  el.innerHTML='<div class="shead"><span class="badge"></span><span class="hint"></span></div><div class="lbl">Ezt a sort számoljuk:</div>';
+  el.querySelector('.badge').textContent=s.title;el.querySelector('.hint').textContent=s.hint;
+  el.appendChild(lineEl(s.before,'a',null));
+  const nt=document.createElement('div');nt.className='notes';
+  s.notes.forEach((n,i)=>{const c=document.createElement('span');c.className='chip';c.textContent=n.text;c.style.setProperty('--c','var(--c'+(n.g%5)+')');c.style.setProperty('--d',(0.6+i*1.3)+'s');nt.appendChild(c);});
+  el.appendChild(nt);
+  const t0=0.6+s.notes.length*1.3;
+  const ar=document.createElement('div');ar.className='arrow';ar.textContent='⬇ újraírom a sort';ar.style.setProperty('--d',t0+'s');el.appendChild(ar);
+  el.appendChild(lineEl(s.after,'b',t0+0.7));
+  return el;
+}
+let stages=[],shown=0,result=0;
+const out=document.getElementById('out'),err=document.getElementById('err');
+const nextB=document.getElementById('next'),allB=document.getElementById('all');
+function start(){
+  err.textContent='';out.innerHTML='';stages=[];shown=0;
+  try{
+    const t0=tokenize(document.getElementById('inp').value);
+    validate(t0);let t=collapse(t0);
+    while(t.length>1){const s=nextStage(t);stages.push(s);t=s.out;if(stages.length>50)throw 'Túl hosszú kifejezés.';}
+    result=t[0].v;
+  }catch(e){err.textContent=String(e);nextB.disabled=allB.disabled=true;return;}
+  if(!stages.length)finish();else{showNext();}
+}
+function finish(){
+  const r=document.createElement('div');r.className='res';r.textContent='🎉 Megoldás: '+fmt(result);out.appendChild(r);r.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function showNext(){
+  if(shown>=stages.length)return;
+  const el=stageEl(stages[shown++]);out.appendChild(el);
+  if(shown>=stages.length){finish();nextB.disabled=allB.disabled=true;}
+  else{nextB.disabled=allB.disabled=false;el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+document.getElementById('go').onclick=start;
+nextB.onclick=showNext;
+allB.onclick=()=>{while(shown<stages.length)showNext();};
+document.getElementById('inp').addEventListener('keydown',e=>{if(e.key==='Enter')start();});
+document.querySelectorAll('.ex').forEach(b=>b.onclick=()=>{document.getElementById('inp').value=b.dataset.e;start();});
+start();
+</script>
+</body>
+</html>
