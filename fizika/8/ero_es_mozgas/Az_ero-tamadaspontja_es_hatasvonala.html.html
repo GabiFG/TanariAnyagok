@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Az erő támadáspontja és hatásvonala</title>
+<style>
+:root{--bg:#eef2f6;--ink:#1c2733;--floor:#3b4856;--card:#fff;--wood:#b98657;--wood2:#9c6d42;--blue:#2457d6;--red:#d62839;--skin:#f1c7a0;--sleeve:#5b7a99;--ghost:#7d8a97;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141b22;--ink:#e6edf3;--floor:#8795a3;--card:#1d2731;--blue:#7ba0ff;--red:#ff6b78;--ghost:#8a97a4}}
+:root[data-theme="dark"]{--bg:#141b22;--ink:#e6edf3;--floor:#8795a3;--card:#1d2731;--blue:#7ba0ff;--red:#ff6b78;--ghost:#8a97a4}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:clamp(20px,4vw,28px);margin:4px 0 12px}
+.stage{background:var(--card);border-radius:14px;padding:8px;overflow:hidden}
+svg{display:block;width:100%;height:auto}
+text{font-family:inherit;fill:var(--ink)}
+#cap{min-height:3.2em;font-size:clamp(16px,2.6vw,20px);line-height:1.45;margin:14px 2px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;padding:12px 20px;border-radius:10px;border:2px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer}
+button.sec{background:transparent;color:var(--blue)}
+button:disabled{opacity:.5;cursor:default}
+#vec{outline:none;touch-action:none}
+@media (max-width:700px){main{padding:10px}.stage{padding:4px;border-radius:10px}text{font-size:36px!important}.row button{flex:1 1 100%;padding:16px;font-size:18px}#cap{font-size:18px}}
+@media (min-width:701px) and (max-width:1100px){text{font-size:28px!important}button{padding:14px 24px;font-size:18px}}
+#vec:focus-visible .hit{stroke:var(--blue);stroke-opacity:.25}
+</style>
+</head>
+<body>
+<main>
+<h1>Az erő támadáspontja és hatásvonala</h1>
+<div class="stage">
+<svg id="svg" viewBox="0 0 900 440" role="img" aria-label="Szekrény eltolása kézzel; erővektor és hatásvonal">
+  <rect x="0" y="380" width="900" height="60" fill="var(--floor)" opacity=".18"/>
+  <line x1="0" y1="380" x2="900" y2="380" stroke="var(--floor)" stroke-width="3"/>
+
+  <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8d6b8"/><stop offset="1" stop-color="#e9ad84"/></linearGradient></defs>
+  <rect id="ghost" x="470" y="170" width="150" height="210" rx="6" fill="none" stroke="var(--ghost)" stroke-width="2.5" stroke-dasharray="8 7" opacity="0"/>
+
+  <g id="cab">
+    <rect x="470" y="170" width="150" height="210" rx="6" fill="var(--wood)"/>
+    <rect x="470" y="170" width="150" height="14" rx="4" fill="var(--wood2)"/>
+    <rect x="480" y="194" width="62" height="176" rx="3" fill="none" stroke="var(--wood2)" stroke-width="3"/>
+    <rect x="548" y="194" width="62" height="176" rx="3" fill="none" stroke="var(--wood2)" stroke-width="3"/>
+    <circle cx="533" cy="282" r="5" fill="var(--wood2)"/><circle cx="557" cy="282" r="5" fill="var(--wood2)"/>
+  </g>
+
+  <g id="hand">
+    <rect x="-250" y="242" width="140" height="66" rx="14" fill="var(--sleeve)"/>
+    <rect x="-122" y="240" width="16" height="70" rx="6" fill="#46627f"/>
+    <g stroke="#c48a5f" stroke-width="1.6" stroke-linejoin="round" fill="url(#sk)">
+      <rect x="-108" y="249" width="66" height="52" rx="22"/>
+      <rect x="-64" y="251" width="62" height="13" rx="6.5"/>
+      <rect x="-66" y="263" width="66" height="13" rx="6.5"/>
+      <rect x="-64" y="275" width="62" height="13" rx="6.5"/>
+      <rect x="-58" y="287" width="52" height="12" rx="6"/>
+      <ellipse cx="-70" cy="244" rx="30" ry="10" transform="rotate(-14 -70 244)"/>
+    </g>
+    <g fill="#fbe3cf" opacity=".85"><ellipse cx="-8" cy="257.5" rx="4" ry="3.5"/><ellipse cx="-8" cy="269.5" rx="4" ry="3.5"/><ellipse cx="-8" cy="281.5" rx="4" ry="3.5"/><ellipse cx="-12" cy="293" rx="3.5" ry="3"/></g>
+  </g>
+
+  <line id="hv" x1="0" y1="275" x2="900" y2="275" stroke="var(--red)" stroke-width="3" opacity="0"/>
+  <text id="hvT" x="20" y="262" text-anchor="start" font-size="24" font-weight="700" fill="var(--red)" style="fill:var(--red)" opacity="0">hatásvonal</text>
+
+  <g id="vec" tabindex="0" opacity="0" role="slider" aria-label="Erővektor (nyilak: mozgatás a hatásvonal mentén)">
+    <line id="vHit" class="hit" x1="0" y1="275" x2="0" y2="275" stroke="transparent" stroke-width="80" stroke-linecap="round"/>
+    <line id="vLine" x1="0" y1="275" x2="0" y2="275" stroke="var(--blue)" stroke-width="7" stroke-linecap="round"/>
+    <polygon id="vHead" points="0,0" fill="var(--blue)"/>
+    <circle id="dot" cx="470" cy="275" r="9" fill="var(--blue)" stroke="var(--card)" stroke-width="3"/>
+    <text id="tT" x="0" y="222" font-size="24" font-weight="700">támadáspont</text>
+    <text id="vT" x="0" y="340" font-size="24" font-weight="700" style="fill:var(--blue)" text-anchor="middle">erővektor</text>
+  </g>
+</svg>
+</div>
+<p id="cap" aria-live="polite"></p>
+<div class="row"><button id="next"></button><button id="reset" class="sec">Újra</button></div>
+</main>
+<script>
+const $=id=>document.getElementById(id), PY=275, P0=470, PUSH=170;
+const S={hx:250,dx:0,len:0,tx:P0,dot:0,line:0,ghost:0};
+let step=0,busy=false,drag=false;
+const fast=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const caps=["A szekrény nyugalomban van. A kéz egy kis erőt fog kifejteni rá.",
+"A kéz megérinti a szekrényt. Ahol érinti, az az erő támadáspontja.",
+"A kéz eltolta a szekrényt. A kék vektor mutatja, hogy merre és mennyivel toltam.",
+"A hatásvonal az erővektoron keresztül rajzolt egyenes. Most fogd meg a kék vektort, és told a piros vonal mentén! Az erő támadáspontja a hatásvonal mentén eltolható tetszőleges irányban."];
+const btn=["Kéz megérinti a szekrényt","Eltolja a szekrényt","Hatásvonal megjelenítése","Újra"];
+function render(){
+  $('hand').setAttribute('transform',`translate(${S.hx},${PY}) scale(.55) translate(0,${-PY})`);
+  $('cab').setAttribute('transform',`translate(${S.dx},0)`);
+  $('ghost').setAttribute('opacity',S.ghost);
+  const tx=S.tx,hx=tx+S.len,L=Math.max(0,S.len-14);
+  for(const id of ['vHit','vLine']){const e=$(id);e.setAttribute('x1',tx);e.setAttribute('x2',tx+L)}
+  $('vHead').setAttribute('points',S.len>18?`${hx},${PY} ${hx-18},${PY-10} ${hx-18},${PY+10}`:'0,0');
+  $('dot').setAttribute('cx',tx);
+  $('tT').setAttribute('x',tx-6);
+  $('vT').setAttribute('x',tx+S.len/2);
+  $('vT').setAttribute('opacity',S.len>60?1:0);
+  $('vec').setAttribute('opacity',S.dot);
+  const c=tx+S.len/2,l=$('hv');
+  l.setAttribute('x1',c-(c-10)*S.line);l.setAttribute('x2',c+(890-c)*S.line);
+  l.setAttribute('opacity',S.line>0?1:0);$('hvT').setAttribute('opacity',S.line>.95?1:0);
+}
+function tween(p,ms){ms=fast?0:ms;return new Promise(res=>{const f0={};for(const k in p)f0[k]=S[k];const t0=performance.now();
+  (function f(t){let q=ms?Math.min(1,(t-t0)/ms):1;q=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
+  for(const k in p)S[k]=f0[k]+(p[k]-f0[k])*q;render();q<1?requestAnimationFrame(f):res()})(t0)})}
+function ui(){$('cap').textContent=caps[step];$('next').textContent=btn[step];$('vec').style.cursor=drag?'grab':'default';
+  $('vec').style.pointerEvents=drag?'auto':'none'}
+async function go(){
+  if(busy)return;
+  if(step===3){return reset()}
+  busy=true;$('next').disabled=true;
+  if(step===0){await tween({hx:P0},900);await tween({dot:1},300)}
+  else if(step===1){S.tx=P0;S.len=0;await tween({ghost:1},300);
+    const a=tween({hx:P0+PUSH,dx:PUSH},1500),b=tween({len:PUSH},1500);await Promise.all([a,b])}
+  else if(step===2){await tween({line:1},1000);drag=true}
+  step++;busy=false;$('next').disabled=false;ui();
+}
+function reset(){drag=false;step=0;Object.assign(S,{hx:250,dx:0,len:0,tx:P0,dot:0,line:0,ghost:0});render();ui()}
+function svgX(e){const s=$('svg'),p=s.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(s.getScreenCTM().inverse()).x}
+const clamp=x=>Math.min(890-S.len,Math.max(30,x));
+let off=0,dragging=false;
+$('vec').addEventListener('pointerdown',e=>{if(!drag)return;dragging=true;off=svgX(e)-S.tx;$('vec').setPointerCapture(e.pointerId);$('vec').style.cursor='grabbing'});
+$('vec').addEventListener('pointermove',e=>{if(!dragging)return;S.tx=clamp(svgX(e)-off);render()});
+const end=()=>{dragging=false;if(drag)$('vec').style.cursor='grab'};
+$('vec').addEventListener('pointerup',end);$('vec').addEventListener('pointercancel',end);
+$('vec').addEventListener('keydown',e=>{if(!drag)return;if(e.key==='ArrowLeft'){S.tx=clamp(S.tx-15);render();e.preventDefault()}if(e.key==='ArrowRight'){S.tx=clamp(S.tx+15);render();e.preventDefault()}});
+$('next').onclick=go;$('reset').onclick=reset;
+function fit(){const n=innerWidth<=700||$('svg').parentNode.clientWidth<600;$('svg').setAttribute('viewBox',n?'0 150 900 260':'0 0 900 440')}
+addEventListener('resize',fit);fit();render();ui();
+</script>
+</body>
+</html>
